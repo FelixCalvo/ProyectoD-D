@@ -15,11 +15,15 @@ public class ExitGameWithFade : MonoBehaviour
 
     public void ExitToMenu()
     {
+        // Proteger este GameObject de ser destruido durante el cambio de escena
+        DontDestroyOnLoad(gameObject);
         StartCoroutine(ExitRoutine());
     }
 
     private IEnumerator ExitRoutine()
     {
+        Debug.Log("=== INICIO ExitRoutine ===");
+        
         // 1. Activar el panel si estaba apagado
         fadePanel.gameObject.SetActive(true);
 
@@ -42,14 +46,48 @@ public class ExitGameWithFade : MonoBehaviour
             yield return null;
         }
 
-        // 5. Cerrar Fusion
+        // 5. Proteger el fadePanel de ser destruido
+        DontDestroyOnLoad(fadePanel.transform.root.gameObject);
+        
+        // 6. Cargar MainMenu ANTES de destruir Fusion
+        Debug.Log("Cargando MainMenu...");
+        AsyncOperation asyncLoad = SceneManager.LoadSceneAsync("MainMenu");
+        asyncLoad.allowSceneActivation = false; // No activar todavía
+        
+        // Esperar a que esté casi cargada (90%)
+        while (asyncLoad.progress < 0.9f)
+        {
+            Debug.Log($"Progreso de carga: {asyncLoad.progress * 100}%");
+            yield return null;
+        }
+        
+        Debug.Log("Escena precargada al 90%, cerrando NetworkRunner...");
+        
+        // 7. Cerrar Fusion DESPUÉS de precargar la escena
         NetworkRunner runner = FindFirstObjectByType<NetworkRunner>();
         if (runner != null)
-            yield return runner.Shutdown();
-
-        yield return new WaitForSeconds(0.3f);
-
-        // 6. Cargar MainMenu
-        SceneManager.LoadScene("MainMenu");
+        {
+            Debug.Log("Cerrando NetworkRunner...");
+            runner.Shutdown(destroyGameObject: true); // Destruir automáticamente
+        }
+        
+        Debug.Log("NetworkRunner cerrado, activando escena...");
+        
+        // Limpiar PlayerPrefs
+        PlayerPrefs.DeleteKey("TipoPartida");
+        PlayerPrefs.DeleteKey("NombrePartida");
+        PlayerPrefs.Save();
+        Debug.Log("PlayerPrefs limpiados");
+        
+        // Activar la escena precargada INMEDIATAMENTE
+        asyncLoad.allowSceneActivation = true;
+        
+        // Esperar a que termine
+        while (!asyncLoad.isDone)
+        {
+            yield return null;
+        }
+        
+        Debug.Log("=== ESCENA CARGADA ===");
     }
 }

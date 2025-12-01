@@ -29,6 +29,9 @@ public class ListaPartidasUI : MonoBehaviour
 
             partidasInstanciadas.Add(itemGO);
         }
+        
+        // Forzar reconstrucción del layout después de instanciar todos los items
+        UnityEngine.UI.LayoutRebuilder.ForceRebuildLayoutImmediate(contenedorPartidas as RectTransform);
     }
 
     // Limpiar todas las partidas de la lista
