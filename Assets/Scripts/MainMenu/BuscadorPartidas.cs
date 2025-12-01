@@ -83,14 +83,20 @@ public class BuscadorPartidas : MonoBehaviour, INetworkRunnerCallbacks
         // Pequeña espera para asegurar que se destruyó el anterior
         await System.Threading.Tasks.Task.Delay(100);
 
+        // Configurar región EU forzada en PhotonAppSettings antes de crear el runner
+        if (Fusion.Photon.Realtime.PhotonAppSettings.TryGetGlobal(out var photonSettings))
+        {
+            photonSettings.AppSettings.FixedRegion = "eu";
+            Debug.Log("Configurada región fija: eu");
+        }
+
         // Crear un runner temporal solo para buscar sesiones
         var runnerGO = new GameObject("SessionListRunner");
         _sessionRunner = runnerGO.AddComponent<NetworkRunner>();
         _sessionRunner.AddCallbacks(this);
 
-
-        //forzamos a la eu European Union region
-        var result = await _sessionRunner.JoinSessionLobby(SessionLobby.ClientServer, "eu");
+        // Conectar al lobby de la región EU
+        var result = await _sessionRunner.JoinSessionLobby(SessionLobby.ClientServer);
 
         if (!result.Ok)
         {
@@ -107,8 +113,8 @@ public class BuscadorPartidas : MonoBehaviour, INetworkRunnerCallbacks
             string region = _sessionRunner.SessionInfo.Region;
             Debug.Log($"Conectado al lobby en región: {region}, esperando lista de sesiones...");
             
-            // Esperar un poco para recibir la lista actualizada
-            await System.Threading.Tasks.Task.Delay(2000);
+            // Esperar más tiempo para asegurar que se recibe la lista completa
+            await System.Threading.Tasks.Task.Delay(3000);
             _buscandoPartidas = false;
         }
     }
@@ -135,16 +141,19 @@ public class BuscadorPartidas : MonoBehaviour, INetworkRunnerCallbacks
         }
     }
 
-    private void OnUnirseAPartida(string nombrePartida)
+    private async void OnUnirseAPartida(string nombrePartida)
     {
         Debug.Log($"Uniéndose a la partida: {nombrePartida}");
         
-        // Destruir el runner de búsqueda antes de cambiar de escena
+        // Destruir el runner de búsqueda completamente antes de cambiar de escena
         if (_sessionRunner != null)
         {
-            _sessionRunner.Shutdown();
+            await _sessionRunner.Shutdown();
             Destroy(_sessionRunner.gameObject);
             _sessionRunner = null;
+            
+            // Pequeña espera para asegurar que se destruyó completamente
+            await System.Threading.Tasks.Task.Delay(200);
         }
         
         // Guardar el nombre de la partida y el tipo

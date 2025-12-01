@@ -81,12 +81,37 @@ public class BasicSpawner : MonoBehaviour, INetworkRunnerCallbacks
 
         Debug.Log($"Iniciando juego... Modo: {mode}, Sesión: {sessionName}");
 
+        // Configurar región EU forzada en PhotonAppSettings ANTES de crear el runner
+        if (Fusion.Photon.Realtime.PhotonAppSettings.TryGetGlobal(out var photonSettings))
+        {
+            photonSettings.AppSettings.FixedRegion = "eu";
+            Debug.Log("Configurada región fija: eu");
+        }
+
         _runner = gameObject.AddComponent<NetworkRunner>();
         _runner.ProvideInput = true;
         _runner.AddCallbacks(this);
 
         var scene = SceneRef.FromIndex(SceneManager.GetActiveScene().buildIndex);
         var sceneManager = gameObject.AddComponent<NetworkSceneManagerDefault>();
+
+        // Conectar al lobby (ya configurado en región EU)
+        var lobbyResult = await _runner.JoinSessionLobby(SessionLobby.ClientServer);
+        
+        if (!lobbyResult.Ok)
+        {
+            Debug.LogError($"Error al conectar al lobby EU: {lobbyResult.ErrorMessage}");
+            Destroy(_runner);
+            _runner = null;
+            return;
+        }
+
+        Debug.Log("Conectado al lobby EU, esperando sincronización...");
+        
+        // Pequeño delay para asegurar que el lobby está completamente sincronizado
+        await System.Threading.Tasks.Task.Delay(500);
+        
+        Debug.Log($"Iniciando partida '{sessionName}' en modo {mode}...");
 
         var result = await _runner.StartGame(new StartGameArgs()
         {
@@ -101,9 +126,13 @@ public class BasicSpawner : MonoBehaviour, INetworkRunnerCallbacks
 
         if (!result.Ok)
         {
-            Debug.LogError($"Error al iniciar juego: {result.ErrorMessage}");
+            string currentRegion = _runner != null && _runner.SessionInfo != null ? _runner.SessionInfo.Region : "desconocida";
+            Debug.LogError($"Error al iniciar juego en modo {mode}, región {currentRegion}: {result.ErrorMessage}");
+            Debug.LogError($"Sesión buscada: '{sessionName}' - ErrorCode: {result.ShutdownReason}");
+            
             if (_runner != null)
             {
+                await _runner.Shutdown();
                 Destroy(_runner);
                 _runner = null;
             }
