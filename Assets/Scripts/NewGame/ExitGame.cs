@@ -4,6 +4,9 @@ using UnityEngine.SceneManagement;
 using Fusion;
 using System.Collections;
 
+/// <summary>
+/// Gestiona la salida del juego con efecto de fade y limpieza de recursos de red
+/// </summary>
 public class ExitGameWithFade : MonoBehaviour
 {
     [Header("Fade Settings")]
@@ -13,6 +16,9 @@ public class ExitGameWithFade : MonoBehaviour
     [Header("Audio")]
     public float musicFadeTime = 2.5f;
 
+    /// <summary>
+    /// Inicia la rutina de salida al menú principal
+    /// </summary>
     public void ExitToMenu()
     {
         // Proteger este GameObject de ser destruido durante el cambio de escena
@@ -20,21 +26,22 @@ public class ExitGameWithFade : MonoBehaviour
         StartCoroutine(ExitRoutine());
     }
 
+    /// <summary>
+    /// Corrutina que maneja el fade out, cierre de conexión y carga de escena
+    /// </summary>
     private IEnumerator ExitRoutine()
     {
-        Debug.Log("=== INICIO ExitRoutine ===");
-        
-        // 1. Activar el panel si estaba apagado
+        // Activar el panel de fade si estaba desactivado
         fadePanel.gameObject.SetActive(true);
 
-        // 2. Bloquear clics
+        // Bloquear interacciones durante el fade
         fadePanel.raycastTarget = true;
 
-        // 3. Fade música (si existe SoundManager)
+        // Fade de música (opcional, descomentar si existe SoundManager)
         //if (SoundManager.Instance != null)
             //StartCoroutine(SoundManager.Instance.FadeOutMusic(musicFadeTime));
 
-        // 4. Fade a negro
+        // Realizar fade a negro
         float t = 0;
         Color c = fadePanel.color;
 
@@ -46,48 +53,39 @@ public class ExitGameWithFade : MonoBehaviour
             yield return null;
         }
 
-        // 5. Proteger el fadePanel de ser destruido
+        // Proteger el panel de fade de ser destruido durante el cambio de escena
         DontDestroyOnLoad(fadePanel.transform.root.gameObject);
         
-        // 6. Cargar MainMenu ANTES de destruir Fusion
-        Debug.Log("Cargando MainMenu...");
+        // Precargar la escena MainMenu sin activarla aún
         AsyncOperation asyncLoad = SceneManager.LoadSceneAsync("MainMenu");
-        asyncLoad.allowSceneActivation = false; // No activar todavía
+        asyncLoad.allowSceneActivation = false;
         
-        // Esperar a que esté casi cargada (90%)
+        // Esperar a que la escena esté cargada al 90%
         while (asyncLoad.progress < 0.9f)
         {
-            Debug.Log($"Progreso de carga: {asyncLoad.progress * 100}%");
             yield return null;
         }
         
-        Debug.Log("Escena precargada al 90%, cerrando NetworkRunner...");
-        
-        // 7. Cerrar Fusion DESPUÉS de precargar la escena
+        // Cerrar la conexión de Fusion después de precargar la escena
         NetworkRunner runner = FindFirstObjectByType<NetworkRunner>();
         if (runner != null)
         {
-            Debug.Log("Cerrando NetworkRunner...");
-            runner.Shutdown(destroyGameObject: true); // Destruir automáticamente
+            // Shutdown y destrucción automática del NetworkRunner
+            runner.Shutdown(destroyGameObject: true);
         }
         
-        Debug.Log("NetworkRunner cerrado, activando escena...");
-        
-        // Limpiar PlayerPrefs
+        // Limpiar datos de sesión de PlayerPrefs
         PlayerPrefs.DeleteKey("TipoPartida");
         PlayerPrefs.DeleteKey("NombrePartida");
         PlayerPrefs.Save();
-        Debug.Log("PlayerPrefs limpiados");
         
-        // Activar la escena precargada INMEDIATAMENTE
+        // Activar la escena precargada
         asyncLoad.allowSceneActivation = true;
         
-        // Esperar a que termine
+        // Esperar a que la activación termine
         while (!asyncLoad.isDone)
         {
             yield return null;
         }
-        
-        Debug.Log("=== ESCENA CARGADA ===");
     }
 }
