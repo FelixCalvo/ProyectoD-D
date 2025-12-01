@@ -33,15 +33,6 @@ public class BuscadorPartidas : MonoBehaviour, INetworkRunnerCallbacks
     public void OnReliableDataReceived(NetworkRunner runner, PlayerRef player, ReliableKey key, ArraySegment<byte> data) { }
     public void OnReliableDataProgress(NetworkRunner runner, PlayerRef player, ReliableKey key, float progress) { }
 
-    void Start()
-    {
-        // Buscar partidas automáticamente al iniciar (si el panel está activo)
-        if (gameObject.activeInHierarchy)
-        {
-            BuscarPartidas();
-        }
-    }
-
     void OnEnable()
     {
         // Buscar el componente si no está asignado
@@ -97,6 +88,8 @@ public class BuscadorPartidas : MonoBehaviour, INetworkRunnerCallbacks
         _sessionRunner = runnerGO.AddComponent<NetworkRunner>();
         _sessionRunner.AddCallbacks(this);
 
+
+        //forzamos a la eu European Union region
         var result = await _sessionRunner.JoinSessionLobby(SessionLobby.ClientServer, "eu");
 
         if (!result.Ok)

@@ -9,7 +9,7 @@ public class BasicSpawner : MonoBehaviour, INetworkRunnerCallbacks
 {
     [Header("Network")]
     [SerializeField] private NetworkPrefabRef _playerPrefab;
-    
+
     [Header("UI")]
     [SerializeField] private ListaPartidasUI listaPartidasUI;
 
@@ -51,9 +51,9 @@ public class BasicSpawner : MonoBehaviour, INetworkRunnerCallbacks
 
         string tipoPartida = PlayerPrefs.GetString("TipoPartida", "");
         string nombrePartida = PlayerPrefs.GetString("NombrePartida", "");
-        
+
         Debug.Log($"BasicSpawner.Start() - Tipo: {tipoPartida}, Nombre: {nombrePartida}");
-        
+
         if (tipoPartida == "Host")
         {
             StartGame(GameMode.Host, nombrePartida);
@@ -112,7 +112,7 @@ public class BasicSpawner : MonoBehaviour, INetworkRunnerCallbacks
         {
             string region = _runner.SessionInfo.Region;
             Debug.Log($"✓ Juego iniciado correctamente. Modo: {mode}, Sesión: {sessionName}, Región: {region}");
-            
+
             // Limpiar PlayerPrefs después de usarlos para evitar reconexiones
             PlayerPrefs.DeleteKey("TipoPartida");
             PlayerPrefs.DeleteKey("NombrePartida");
@@ -129,11 +129,12 @@ public class BasicSpawner : MonoBehaviour, INetworkRunnerCallbacks
         }
 
         Debug.Log("Creando runner temporal para buscar sesiones...");
-        
+
         var tempRunner = gameObject.AddComponent<NetworkRunner>();
         tempRunner.name = "SessionListRunner";
         tempRunner.AddCallbacks(this);
 
+        //forzamos a la eu European Union region
         var result = await tempRunner.JoinSessionLobby(SessionLobby.ClientServer, "eu");
 
         if (!result.Ok)
@@ -144,7 +145,7 @@ public class BasicSpawner : MonoBehaviour, INetworkRunnerCallbacks
         else
         {
             Debug.Log("✓ Conectado al lobby, esperando lista de sesiones...");
-            
+
             // Destruir el runner temporal después de un tiempo para que actualice la lista
             await System.Threading.Tasks.Task.Delay(2000);
             if (tempRunner != null && _runner == null)
@@ -159,7 +160,7 @@ public class BasicSpawner : MonoBehaviour, INetworkRunnerCallbacks
     {
         _sessions = sessionList;
         Debug.Log($"Lista de sesiones actualizada: {sessionList.Count} partidas encontradas");
-        
+
         // Actualizar la UI con la lista de partidas
         if (listaPartidasUI != null)
         {

@@ -10,7 +10,9 @@ public class MainMenuController : MonoBehaviour
     [SerializeField] private Image fadePanel;
     [SerializeField] private GameObject nameGamePanel;
     [SerializeField] private GameObject mainMenuPanel;
+    [SerializeField] private GameObject clientPanel;
     [SerializeField] private GameObject contenedorPartidas;
+
 
     [Header("Name Game Input")]
     [SerializeField] private TMP_InputField inputFieldNameGame;
@@ -59,7 +61,7 @@ public class MainMenuController : MonoBehaviour
         if (buttonClient != null)
             buttonClient.onClick.AddListener(() =>
             {
-                contenedorPartidas.SetActive(true);
+                clientPanel.SetActive(true);
                 mainMenuPanel.SetActive(false);
             });
 
