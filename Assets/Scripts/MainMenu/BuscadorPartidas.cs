@@ -156,13 +156,8 @@ public class BuscadorPartidas : MonoBehaviour, INetworkRunnerCallbacks
             await System.Threading.Tasks.Task.Delay(200);
         }
         
-        // Guardar el nombre de la partida y el tipo
-        PlayerPrefs.SetString("NombrePartida", nombrePartida);
-        PlayerPrefs.SetString("TipoPartida", "Client");
-        PlayerPrefs.Save();
-
-        // Cargar la escena del juego
-        UnityEngine.SceneManagement.SceneManager.LoadScene("NewGame");
+        // Unirse a la partida y luego cargar Players
+        await NetworkSessionStarter.UnirseAPartidaYCargarPlayers(nombrePartida);
     }
 
     // Método público para refrescar desde un botón

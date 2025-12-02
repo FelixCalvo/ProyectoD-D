@@ -2,6 +2,9 @@ using UnityEngine;
 using TMPro;
 using Fusion;
 using System.Collections.Generic;
+using UnityEngine.UI;
+using UnityEngine.SceneManagement;
+using System.Linq;
 
 public class ControlCylinder : NetworkBehaviour
 {
@@ -15,6 +18,10 @@ public class ControlCylinder : NetworkBehaviour
     [SerializeField] private GameObject panelMensaje;
     [SerializeField] private TextMeshProUGUI textoMensaje;
     
+    [Header("Botón Iniciar Partida")]
+    [SerializeField] private Button botonIniciarPartida;
+    [SerializeField] private TextMeshProUGUI textoBotonIniciar;
+    
     [Header("Configuración")]
     [SerializeField] private float velocidadRotacion = 5f;
     [SerializeField] private Color colorDisponible = Color.green;
@@ -27,10 +34,9 @@ public class ControlCylinder : NetworkBehaviour
     private int indicePersonajeActual = 0; // Índice del personaje frente a la cámara
     private int totalPersonajes = 0; // Total de personajes en el cilindro
     
-    // Materiales originales de los personajes
-    private Dictionary<GameObject, Material[]> materialesOriginales = new Dictionary<GameObject, Material[]>();
     private string miNombreUsuario = "";
     private string miPersonajeSeleccionado = ""; // Caché local de mi selección
+    private int ultimoCountPersonajes = 0; // Para detectar cambios en el diccionario
 
     // Diccionario sincronizado en red: nombrePersonaje -> nombreUsuario
     [Networked, Capacity(4)]
@@ -54,22 +60,50 @@ public class ControlCylinder : NetworkBehaviour
         {
             panelMensaje.SetActive(false);
         }
+        
+        // Configurar botón de iniciar partida
+        if (botonIniciarPartida != null)
+        {
+            botonIniciarPartida.onClick.AddListener(IniciarPartida);
+            botonIniciarPartida.gameObject.SetActive(false); // Ocultar por defecto
+        }
     }
 
     public override void Spawned()
     {
         base.Spawned();
         
-        // Inicialización de red una vez que el objeto está spawneado
-        if (cylinderPlayers != null)
-        {
-            GuardarMaterialesOriginales();
-        }
-        
-        // Actualizar UI con información de red
+        // Actualizar UI con información de red (incluye valores existentes al unirse)
         ActualizarUIPersonajeActual();
+        
+        // Mostrar botón solo si eres el Host
+        if (botonIniciarPartida != null && Object.HasStateAuthority)
+        {
+            botonIniciarPartida.gameObject.SetActive(true);
+            ActualizarEstadoBoton();
+        }
     }
-
+    
+    public override void FixedUpdateNetwork()
+    {
+        // Solo actualizar si el diccionario cambió
+        int currentCount = personajesSeleccionados.Count;
+        if (currentCount != ultimoCountPersonajes)
+        {
+            Debug.Log($"🔄 Diccionario cambió: {ultimoCountPersonajes} → {currentCount}");
+            ultimoCountPersonajes = currentCount;
+            
+            // Actualizar UI cuando detectamos cambio
+            ActualizarUIPersonajeActual();
+            
+            // Actualizar botón si eres Host
+            if (Object.HasStateAuthority && botonIniciarPartida != null)
+            {
+                ActualizarEstadoBoton();
+            }
+        }
+    }
+    
     void Update()
     {
         // Si estamos rotando, interpolar suavemente hacia la rotación objetivo
@@ -159,30 +193,62 @@ public class ControlCylinder : NetworkBehaviour
         }
         
         string nombrePersonaje = personajeSeleccionado.name;
+        
+        // Obtener el nombre del usuario desde el InputField
+        string nombreUsuario = "";
+        if (inputNombreUsuario != null && !string.IsNullOrEmpty(inputNombreUsuario.text))
+        {
+            nombreUsuario = inputNombreUsuario.text;
+        }
+        else
+        {
+            Debug.LogWarning("InputField de nombre de usuario no asignado o vacío. Usando nombre por defecto.");
+            nombreUsuario = "Jugador" + Random.Range(1000, 9999);
+        }
+        
+        // Verificar si este usuario ya tiene un personaje seleccionado
+        string personajeAnterior = ObtenerPersonajeDelUsuario(nombreUsuario);
+        
+        // Si intentas seleccionar el mismo personaje que ya tienes, deseleccionar
+        if (!string.IsNullOrEmpty(personajeAnterior) && personajeAnterior == nombrePersonaje)
+        {
+            Debug.Log($"🔓 Deseleccionando personaje '{nombrePersonaje}'");
+            MostrarMensaje($"🔓 Has deseleccionado a '{nombrePersonaje}'", true);
             
-            // Verificar si el personaje ya está seleccionado por otro jugador
-            if (PersonajeYaSeleccionado(nombrePersonaje))
+            // Limpiar caché local
+            miPersonajeSeleccionado = "";
+            PlayerPrefs.SetString("NombrePersonajeSeleccionado", "");
+            PlayerPrefs.Save();
+            
+            // Notificar a la red para liberar
+            if (Object != null && Object.HasStateAuthority)
             {
-                string usuarioOcupante = ObtenerUsuarioDelPersonaje(nombrePersonaje);
+                Debug.Log("🟢 [HOST] Liberando personaje directamente");
+                RPC_LiberarPersonaje(nombrePersonaje);
+            }
+            else if (Object != null)
+            {
+                Debug.Log("🔵 [CLIENT] Solicitando liberación al Host");
+                RPC_SolicitarLiberacion(nombrePersonaje);
+            }
+            return;
+        }
+        
+        // Verificar si el personaje ya está seleccionado por OTRO jugador
+        if (PersonajeYaSeleccionado(nombrePersonaje))
+        {
+            string usuarioOcupante = ObtenerUsuarioDelPersonaje(nombrePersonaje);
+            if (usuarioOcupante != nombreUsuario) // Solo bloquear si NO es tu personaje
+            {
                 Debug.LogWarning($"❌ El personaje '{nombrePersonaje}' ya está seleccionado por '{usuarioOcupante}'");
                 MostrarMensaje($"❌ '{nombrePersonaje}' ya está seleccionado por '{usuarioOcupante}'", false);
                 return;
             }
-            
-            // Obtener el nombre del usuario desde el InputField
-            string nombreUsuario = "";
-            if (inputNombreUsuario != null && !string.IsNullOrEmpty(inputNombreUsuario.text))
-            {
-                nombreUsuario = inputNombreUsuario.text;
-            }
-            else
-            {
-                Debug.LogWarning("InputField de nombre de usuario no asignado o vacío. Usando nombre por defecto.");
-                nombreUsuario = "Jugador" + Random.Range(1000, 9999);
-            }
-            
+        }
+        
         // Guardar nombre de usuario localmente
         miNombreUsuario = nombreUsuario;
+        string antiguaSeleccion = miPersonajeSeleccionado;
         miPersonajeSeleccionado = nombrePersonaje; // Guardar en caché local
         
         // Guardar en PlayerPrefs localmente
@@ -192,6 +258,11 @@ public class ControlCylinder : NetworkBehaviour
         
         Debug.Log($"✓ Personaje seleccionado: {nombrePersonaje}");
         Debug.Log($"✓ Usuario: {nombreUsuario}");
+        if (!string.IsNullOrEmpty(personajeAnterior))
+        {
+            Debug.Log($"🔄 Liberando personaje anterior: {personajeAnterior}");
+        }
+        Debug.Log($"🔍 HasStateAuthority: {Object.HasStateAuthority}, HasInputAuthority: {Object.HasInputAuthority}");
         
         MostrarMensaje($"✓ Has seleccionado a '{nombrePersonaje}'", true);
         
@@ -202,41 +273,95 @@ public class ControlCylinder : NetworkBehaviour
             textoEstadoPersonaje.color = colorMiSeleccion;
         }
         
-        // Notificar a la red sobre la selección
+        // Notificar a la red sobre la selección (incluye liberar anterior)
         if (Object != null && Object.HasStateAuthority)
         {
-            RPC_SeleccionarPersonaje(nombrePersonaje, nombreUsuario);
+            // Si eres el Host, ejecuta directamente
+            Debug.Log("🟢 [HOST] Ejecutando selección directamente");
+            RPC_SeleccionarPersonaje(nombrePersonaje, nombreUsuario, personajeAnterior);
         }
-        else if (Object != null && Object.HasInputAuthority)
+        else if (Object != null)
         {
-            // Si no somos el host pero tenemos autoridad de input, solicitar al host
-            RPC_SolicitarSeleccion(nombrePersonaje, nombreUsuario);
+            // Si eres cliente, solicita al host (cambio: Proxies puede llamar a StateAuthority)
+            Debug.Log("🔵 [CLIENT] Solicitando selección al Host");
+            RPC_SolicitarSeleccion(nombrePersonaje, nombreUsuario, personajeAnterior);
         }
     }
     
     /// <summary>
     /// RPC para que los clientes soliciten al host registrar su selección
     /// </summary>
-    [Rpc(RpcSources.InputAuthority, RpcTargets.StateAuthority)]
-    private void RPC_SolicitarSeleccion(NetworkString<_32> nombrePersonaje, NetworkString<_32> nombreUsuario)
+    [Rpc(RpcSources.Proxies, RpcTargets.StateAuthority)]
+    private void RPC_SolicitarSeleccion(NetworkString<_32> nombrePersonaje, NetworkString<_32> nombreUsuario, NetworkString<_32> personajeAnterior)
     {
+        Debug.Log($"🔵 [HOST] Recibió solicitud de selección: {nombrePersonaje.Value} por {nombreUsuario.Value}");
+        if (!string.IsNullOrEmpty(personajeAnterior.Value))
+        {
+            Debug.Log($"🔄 [HOST] Liberando personaje anterior: {personajeAnterior.Value}");
+        }
+        
         // El host recibe la solicitud y la propaga a todos
-        RPC_SeleccionarPersonaje(nombrePersonaje, nombreUsuario);
+        RPC_SeleccionarPersonaje(nombrePersonaje, nombreUsuario, personajeAnterior);
+    }
+    
+    /// <summary>
+    /// RPC para que los clientes soliciten liberar un personaje
+    /// </summary>
+    [Rpc(RpcSources.Proxies, RpcTargets.StateAuthority)]
+    private void RPC_SolicitarLiberacion(NetworkString<_32> nombrePersonaje)
+    {
+        Debug.Log($"🔵 [HOST] Recibió solicitud de liberación: {nombrePersonaje.Value}");
+        RPC_LiberarPersonaje(nombrePersonaje);
+    }
+    
+    /// <summary>
+    /// RPC para liberar un personaje (deseleccionar)
+    /// </summary>
+    [Rpc(RpcSources.StateAuthority, RpcTargets.All)]
+    private void RPC_LiberarPersonaje(NetworkString<_32> nombrePersonaje)
+    {
+        if (personajesSeleccionados.ContainsKey(nombrePersonaje))
+        {
+            personajesSeleccionados.Remove(nombrePersonaje);
+            Debug.Log($"🔓 [RED] Personaje '{nombrePersonaje.Value}' liberado (Total: {personajesSeleccionados.Count})");
+            
+            // Actualizar UI
+            ActualizarUIPersonajeActual();
+            
+            // Actualizar botón si eres Host
+            if (Object.HasStateAuthority && botonIniciarPartida != null)
+            {
+                ActualizarEstadoBoton();
+            }
+        }
     }
     
     /// <summary>
     /// RPC para sincronizar la selección de personaje a todos los clientes
     /// </summary>
     [Rpc(RpcSources.StateAuthority, RpcTargets.All)]
-    private void RPC_SeleccionarPersonaje(NetworkString<_32> nombrePersonaje, NetworkString<_32> nombreUsuario)
+    private void RPC_SeleccionarPersonaje(NetworkString<_32> nombrePersonaje, NetworkString<_32> nombreUsuario, NetworkString<_32> personajeAnterior)
     {
-        // Agregar al diccionario sincronizado
+        // Si el usuario tenía un personaje anterior seleccionado, liberarlo
+        if (!string.IsNullOrEmpty(personajeAnterior.Value) && personajesSeleccionados.ContainsKey(personajeAnterior))
+        {
+            personajesSeleccionados.Remove(personajeAnterior);
+            Debug.Log($"🔓 [RED] Personaje '{personajeAnterior.Value}' liberado");
+        }
+        
+        // Agregar nuevo personaje al diccionario sincronizado
         personajesSeleccionados.Add(nombrePersonaje, nombreUsuario);
         
-        Debug.Log($"🌐 [RED] Personaje '{nombrePersonaje.Value}' seleccionado por '{nombreUsuario.Value}'");
+        Debug.Log($"🌐 [RED] Personaje '{nombrePersonaje.Value}' seleccionado por '{nombreUsuario.Value}' (Total: {personajesSeleccionados.Count})");
         
-        // Actualizar UI para reflejar la selección
+        // Forzar actualización inmediata de UI
         ActualizarUIPersonajeActual();
+        
+        // Actualizar botón si eres Host
+        if (Object.HasStateAuthority && botonIniciarPartida != null)
+        {
+            ActualizarEstadoBoton();
+        }
     }
 
     /// <summary>
@@ -270,6 +395,25 @@ public class ControlCylinder : NetworkBehaviour
     }
 
     /// <summary>
+    /// Obtiene el personaje que tiene seleccionado un usuario (búsqueda inversa)
+    /// </summary>
+    private string ObtenerPersonajeDelUsuario(string nombreUsuario)
+    {
+        // Validar que el objeto está spawneado antes de acceder a propiedades de red
+        if (Object == null || !Object.IsValid)
+            return "";
+            
+        foreach (var kvp in personajesSeleccionados)
+        {
+            if (kvp.Value.Value == nombreUsuario)
+            {
+                return kvp.Key.Value; // Retornar el nombre del personaje
+            }
+        }
+        return "";
+    }
+    
+    /// <summary>
     /// Obtiene la lista de todos los personajes seleccionados
     /// </summary>
     public Dictionary<string, string> ObtenerPersonajesSeleccionados()
@@ -288,53 +432,6 @@ public class ControlCylinder : NetworkBehaviour
     }
     
     // ==================== MÉTODOS DE FEEDBACK VISUAL ====================
-    
-    /// <summary>
-    /// Guarda los materiales originales de todos los personajes
-    /// </summary>
-    private void GuardarMaterialesOriginales()
-    {
-        if (cylinderPlayers == null)
-        {
-            Debug.LogError("❌ cylinderPlayers es null en GuardarMaterialesOriginales");
-            return;
-        }
-        
-        Debug.Log("💾 Guardando materiales originales...");
-        
-        // Solo guardar los primeros 4 hijos (personajes)
-        int maxPersonajes = Mathf.Min(cylinderPlayers.transform.childCount, 4);
-        for (int i = 0; i < maxPersonajes; i++)
-        {
-            Transform hijo = cylinderPlayers.transform.GetChild(i);
-            Debug.Log($"  Procesando hijo {i}: {hijo.name}");
-            
-            Renderer[] renderers = hijo.GetComponentsInChildren<Renderer>();
-            Debug.Log($"    - Renderers encontrados: {renderers.Length}");
-            
-            if (renderers.Length > 0)
-            {
-                Material[] materiales = new Material[renderers.Length];
-                for (int j = 0; j < renderers.Length; j++)
-                {
-                    if (renderers[j].sharedMaterial != null)
-                    {
-                        // Crear copia del material para no modificar el original
-                        materiales[j] = new Material(renderers[j].sharedMaterial);
-                        renderers[j].material = materiales[j];
-                        Debug.Log($"      ✓ Material {j} guardado: {materiales[j].name}, Shader: {materiales[j].shader.name}");
-                    }
-                    else
-                    {
-                        Debug.LogWarning($"      ⚠ Renderer {j} ({renderers[j].name}) no tiene sharedMaterial");
-                    }
-                }
-                materialesOriginales[hijo.gameObject] = materiales;
-            }
-        }
-        
-        Debug.Log($"✅ Materiales guardados para {materialesOriginales.Count} personajes");
-    }
     
     /// <summary>
     /// Obtiene el personaje que está frente a la cámara usando el índice actual
@@ -374,7 +471,7 @@ public class ControlCylinder : NetworkBehaviour
             // PRIORIDAD 1: Verificar caché local primero
             if (!string.IsNullOrEmpty(miPersonajeSeleccionado) && nombrePersonaje == miPersonajeSeleccionado)
             {
-                textoEstadoPersonaje.text = "✓ TU SELECCIÓN";
+                textoEstadoPersonaje.text = "TU SELECCIÓN";
                 textoEstadoPersonaje.color = colorMiSeleccion;
             }
             // PRIORIDAD 2: Verificar diccionario de red
@@ -385,81 +482,21 @@ public class ControlCylinder : NetworkBehaviour
                 
                 if (esMiSeleccion)
                 {
-                    textoEstadoPersonaje.text = "✓ TU SELECCIÓN";
+                    textoEstadoPersonaje.text = "TU SELECCIÓN";
                     textoEstadoPersonaje.color = colorMiSeleccion;
                 }
                 else
                 {
-                    textoEstadoPersonaje.text = $"❌ Ocupado por: {usuario}";
+                    textoEstadoPersonaje.text = $"OCUPADO POR: {usuario}";
                     textoEstadoPersonaje.color = colorOcupado;
                 }
             }
             else
             {
-                textoEstadoPersonaje.text = "✓ DISPONIBLE";
+                textoEstadoPersonaje.text = "DISPONIBLE";
                 textoEstadoPersonaje.color = colorDisponible;
             }
         }
-    }
-    
-    /// <summary>
-    /// Aplica efecto visual al personaje seleccionado
-    /// </summary>
-    private void AplicarEfectoVisualPersonaje(string nombrePersonaje, string nombreUsuario)
-    {
-        if (cylinderPlayers == null)
-        {
-            Debug.LogError("cylinderPlayers es null en AplicarEfectoVisualPersonaje");
-            return;
-        }
-        
-        Debug.Log($"🔍 Buscando personaje '{nombrePersonaje}' para aplicar efectos visuales...");
-        
-        // Solo buscar en los primeros 4 hijos (personajes)
-        int maxPersonajes = Mathf.Min(cylinderPlayers.transform.childCount, 4);
-        for (int i = 0; i < maxPersonajes; i++)
-        {
-            Transform hijo = cylinderPlayers.transform.GetChild(i);
-            Debug.Log($"  - Hijo {i}: '{hijo.name}'");
-            
-            if (hijo.name == nombrePersonaje)
-            {
-                bool esMiSeleccion = nombreUsuario == miNombreUsuario;
-                Color colorAplicar = esMiSeleccion ? colorMiSeleccion : colorOcupado;
-                
-                Debug.Log($"✅ Personaje encontrado! Aplicando color {colorAplicar} (Mi selección: {esMiSeleccion}, Mi usuario: '{miNombreUsuario}')");
-                
-                // Aplicar color a todos los renderers del personaje
-                Renderer[] renderers = hijo.GetComponentsInChildren<Renderer>();
-                Debug.Log($"  Renderers encontrados: {renderers.Length}");
-                
-                foreach (Renderer renderer in renderers)
-                {
-                    // Modificar directamente el material existente
-                    if (renderer.material != null)
-                    {
-                        renderer.material.color = colorAplicar;
-                        Debug.Log($"    ✓ Color aplicado a {renderer.name}: {renderer.material.color}");
-                        
-                        // Añadir emisión si está disponible
-                        if (renderer.material.HasProperty("_EmissionColor"))
-                        {
-                            renderer.material.EnableKeyword("_EMISSION");
-                            renderer.material.SetColor("_EmissionColor", colorAplicar * 0.5f);
-                            Debug.Log($"    ✓ Emisión aplicada");
-                        }
-                    }
-                    else
-                    {
-                        Debug.LogWarning($"    ⚠ Renderer {renderer.name} no tiene material");
-                    }
-                }
-                
-                return;
-            }
-        }
-        
-        Debug.LogWarning($"❌ No se encontró el personaje '{nombrePersonaje}' entre los {maxPersonajes} hijos");
     }
     
     /// <summary>
@@ -490,6 +527,94 @@ public class ControlCylinder : NetworkBehaviour
         {
             panelMensaje.SetActive(false);
         }
+    }
+    
+    // ==================== MÉTODOS DE INICIAR PARTIDA ====================
+    
+    /// <summary>
+    /// Actualiza el estado del botón según si todos han seleccionado
+    /// </summary>
+    private void ActualizarEstadoBoton()
+    {
+        if (!Object.HasStateAuthority || botonIniciarPartida == null || Runner == null)
+            return;
+        
+        int jugadoresConectados = Runner.ActivePlayers.Count();
+        int personajesSeleccionadosCount = this.personajesSeleccionados.Count;
+        
+        // Cambio: solo activar cuando hay exactamente 4 jugadores seleccionados
+        bool todosSeleccionaron = personajesSeleccionadosCount == 4;
+        
+        // Activar/desactivar interacción del botón
+        botonIniciarPartida.interactable = todosSeleccionaron;
+        
+        // Cambiar color del botón según el estado
+        ColorBlock colores = botonIniciarPartida.colors;
+        if (todosSeleccionaron)
+        {
+            colores.normalColor = colorDisponible;
+            colores.highlightedColor = Color.Lerp(colorDisponible, Color.white, 0.3f);
+            colores.pressedColor = Color.Lerp(colorDisponible, Color.black, 0.3f);
+        }
+        else
+        {
+            colores.normalColor = Color.gray;
+            colores.highlightedColor = Color.gray;
+            colores.pressedColor = Color.gray;
+        }
+        botonIniciarPartida.colors = colores;
+        
+        // Actualizar texto del botón
+        if (textoBotonIniciar != null)
+        {
+            if (todosSeleccionaron)
+            {
+                textoBotonIniciar.text = "✓ INICIAR PARTIDA";
+                textoBotonIniciar.color = Color.white;
+            }
+            else
+            {
+                textoBotonIniciar.text = $"Esperando jugadores ({personajesSeleccionadosCount}/4)";
+                textoBotonIniciar.color = Color.white;
+            }
+        }
+        
+        Debug.Log($"🔘 Botón actualizado - Seleccionados: {personajesSeleccionadosCount}/4, Activado: {todosSeleccionaron}");
+    }
+    
+    /// <summary>
+    /// Inicia la partida cargando la escena NewGame (solo Host)
+    /// </summary>
+    private void IniciarPartida()
+    {
+        if (!Object.HasStateAuthority || Runner == null)
+        {
+            Debug.LogWarning("Solo el Host puede iniciar la partida o Runner no está disponible");
+            return;
+        }
+        
+        int seleccionados = personajesSeleccionados.Count;
+        
+        if (seleccionados < 4)
+        {
+            MostrarMensaje($"⚠ Faltan jugadores por seleccionar ({seleccionados}/4)", false);
+            return;
+        }
+        
+        Debug.Log("🎮 Iniciando partida...");
+        MostrarMensaje("🎮 Iniciando partida...", true);
+        
+        // Cargar escena NewGame para todos los clientes
+        RPC_CargarEscenaNewGame();
+    }
+    
+    /// <summary>
+    /// RPC para cargar la escena NewGame en todos los clientes
+    /// </summary>
+    [Rpc(RpcSources.StateAuthority, RpcTargets.All)]
+    private void RPC_CargarEscenaNewGame()
+    {
+        SceneManager.LoadScene("NewGame");
     }
     
 }

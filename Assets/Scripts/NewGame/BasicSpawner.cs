@@ -40,15 +40,29 @@ public class BasicSpawner : MonoBehaviour, INetworkRunnerCallbacks
 
     void Start()
     {
-        // Verificar si ya existe un NetworkRunner activo en cualquier escena
-        NetworkRunner existingRunner = FindFirstObjectByType<NetworkRunner>();
+        // Verificar si ya existe un NetworkRunner activo (creado desde NetworkSessionStarter)
+        NetworkRunner existingRunner = NetworkSessionStarter.GetRunner();
+        
         if (existingRunner != null && existingRunner.IsRunning)
         {
-            Debug.LogWarning("Ya existe un NetworkRunner activo, no se creará otro");
+            Debug.Log("✓ NetworkRunner ya existe y está activo, reutilizándolo");
+            _runner = existingRunner;
+            _runner.AddCallbacks(this);
+            return;
+        }
+        
+        // Si no hay runner activo, buscar uno en la escena
+        existingRunner = FindFirstObjectByType<NetworkRunner>();
+        if (existingRunner != null && existingRunner.IsRunning)
+        {
+            Debug.LogWarning("Ya existe un NetworkRunner activo en la escena");
             _runner = existingRunner;
             return;
         }
 
+        // Si llegamos aquí, no hay sesión activa (no debería pasar con el nuevo flujo)
+        Debug.LogWarning("⚠ No se encontró sesión de red activa. Verifica el flujo de inicio.");
+        
         string tipoPartida = PlayerPrefs.GetString("TipoPartida", "");
         string nombrePartida = PlayerPrefs.GetString("NombrePartida", "");
 
@@ -60,14 +74,11 @@ public class BasicSpawner : MonoBehaviour, INetworkRunnerCallbacks
         }
         else if (tipoPartida == "Client" && !string.IsNullOrEmpty(nombrePartida))
         {
-            // Unirse a una partida específica
             StartGame(GameMode.Client, nombrePartida);
         }
         else
         {
-            // Si no hay datos, buscar partidas disponibles
-            Debug.LogWarning("No se encontró información de partida, buscando partidas disponibles...");
-            RefreshSessionList();
+            Debug.LogWarning("No se encontró información de partida");
         }
     }
 

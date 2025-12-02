@@ -68,14 +68,7 @@ public class MainMenuController : MonoBehaviour
         //StartCoroutine(LoadSceneWithFade("ListGames")));
 
         if (buttonNameGame != null)
-            buttonNameGame.onClick.AddListener(() =>
-            {
-                string nombre = inputFieldNameGame.text;
-                PlayerPrefs.SetString("NombrePartida", nombre);
-                PlayerPrefs.SetString("TipoPartida", "Host");
-                PlayerPrefs.Save(); // Importante
-                StartCoroutine(LoadSceneWithFade("HostServer"));
-            });
+            buttonNameGame.onClick.AddListener(() => OnCrearPartida());
 
         if (buttonServer != null)
             buttonServer.onClick.AddListener(() =>
@@ -172,5 +165,19 @@ public class MainMenuController : MonoBehaviour
         Color finalColor = fadePanel.color;
         finalColor.a = 1f;
         fadePanel.color = finalColor;
+    }
+    
+    private async void OnCrearPartida()
+    {
+        string nombre = inputFieldNameGame.text;
+        
+        if (string.IsNullOrEmpty(nombre))
+        {
+            Debug.LogWarning("⚠ Debes introducir un nombre para la partida");
+            return;
+        }
+        
+        // Crear la partida de red ANTES de ir a Players
+        await NetworkSessionStarter.CrearPartidaYCargarPlayers(nombre);
     }
 }
