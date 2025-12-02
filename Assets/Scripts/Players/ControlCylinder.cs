@@ -30,6 +30,7 @@ public class ControlCylinder : NetworkBehaviour
     // Materiales originales de los personajes
     private Dictionary<GameObject, Material[]> materialesOriginales = new Dictionary<GameObject, Material[]>();
     private string miNombreUsuario = "";
+    private string miPersonajeSeleccionado = ""; // Caché local de mi selección
 
     // Diccionario sincronizado en red: nombrePersonaje -> nombreUsuario
     [Networked, Capacity(4)]
@@ -85,9 +86,6 @@ public class ControlCylinder : NetworkBehaviour
             {
                 cylinderPlayers.transform.rotation = rotacionObjetivo;
                 rotando = false;
-                
-                // Actualizar UI cuando termine la rotación
-                ActualizarUIPersonajeActual();
             }
         }
     }
@@ -112,6 +110,9 @@ public class ControlCylinder : NetworkBehaviour
             {
                 indicePersonajeActual = 0; // Volver al inicio
             }
+            
+            // Actualizar UI inmediatamente sin esperar a que termine la rotación
+            ActualizarUIPersonajeActual();
         }
     }
 
@@ -132,6 +133,9 @@ public class ControlCylinder : NetworkBehaviour
             {
                 indicePersonajeActual = totalPersonajes - 1; // Volver al final
             }
+            
+            // Actualizar UI inmediatamente sin esperar a que termine la rotación
+            ActualizarUIPersonajeActual();
         }
     }
 
@@ -177,26 +181,49 @@ public class ControlCylinder : NetworkBehaviour
                 nombreUsuario = "Jugador" + Random.Range(1000, 9999);
             }
             
-            // Guardar nombre de usuario localmente
-            miNombreUsuario = nombreUsuario;
-            
-            // Guardar en PlayerPrefs localmente
-            PlayerPrefs.SetString("NombrePersonajeSeleccionado", nombrePersonaje);
-            PlayerPrefs.SetString("NombreUsuario", nombreUsuario);
-            PlayerPrefs.Save();
-            
-            Debug.Log($"✓ Personaje seleccionado: {nombrePersonaje}");
-            Debug.Log($"✓ Usuario: {nombreUsuario}");
-            
-            MostrarMensaje($"✓ Has seleccionado a '{nombrePersonaje}'", true);
-            
-            // Notificar a la red sobre la selección
-            if (Object != null && Object.HasStateAuthority)
-            {
-                RPC_SeleccionarPersonaje(nombrePersonaje, nombreUsuario);
-            }
+        // Guardar nombre de usuario localmente
+        miNombreUsuario = nombreUsuario;
+        miPersonajeSeleccionado = nombrePersonaje; // Guardar en caché local
+        
+        // Guardar en PlayerPrefs localmente
+        PlayerPrefs.SetString("NombrePersonajeSeleccionado", nombrePersonaje);
+        PlayerPrefs.SetString("NombreUsuario", nombreUsuario);
+        PlayerPrefs.Save();
+        
+        Debug.Log($"✓ Personaje seleccionado: {nombrePersonaje}");
+        Debug.Log($"✓ Usuario: {nombreUsuario}");
+        
+        MostrarMensaje($"✓ Has seleccionado a '{nombrePersonaje}'", true);
+        
+        // Actualizar UI LOCALMENTE de forma inmediata (antes del RPC)
+        if (textoEstadoPersonaje != null)
+        {
+            textoEstadoPersonaje.text = "✓ TU SELECCIÓN";
+            textoEstadoPersonaje.color = colorMiSeleccion;
+        }
+        
+        // Notificar a la red sobre la selección
+        if (Object != null && Object.HasStateAuthority)
+        {
+            RPC_SeleccionarPersonaje(nombrePersonaje, nombreUsuario);
+        }
+        else if (Object != null && Object.HasInputAuthority)
+        {
+            // Si no somos el host pero tenemos autoridad de input, solicitar al host
+            RPC_SolicitarSeleccion(nombrePersonaje, nombreUsuario);
+        }
     }
-
+    
+    /// <summary>
+    /// RPC para que los clientes soliciten al host registrar su selección
+    /// </summary>
+    [Rpc(RpcSources.InputAuthority, RpcTargets.StateAuthority)]
+    private void RPC_SolicitarSeleccion(NetworkString<_32> nombrePersonaje, NetworkString<_32> nombreUsuario)
+    {
+        // El host recibe la solicitud y la propaga a todos
+        RPC_SeleccionarPersonaje(nombrePersonaje, nombreUsuario);
+    }
+    
     /// <summary>
     /// RPC para sincronizar la selección de personaje a todos los clientes
     /// </summary>
@@ -208,10 +235,7 @@ public class ControlCylinder : NetworkBehaviour
         
         Debug.Log($"🌐 [RED] Personaje '{nombrePersonaje.Value}' seleccionado por '{nombreUsuario.Value}'");
         
-        // Aplicar efectos visuales al personaje seleccionado
-        AplicarEfectoVisualPersonaje(nombrePersonaje.Value, nombreUsuario.Value);
-        
-        // Actualizar UI
+        // Actualizar UI para reflejar la selección
         ActualizarUIPersonajeActual();
     }
 
@@ -270,24 +294,46 @@ public class ControlCylinder : NetworkBehaviour
     /// </summary>
     private void GuardarMaterialesOriginales()
     {
-        if (cylinderPlayers == null) return;
+        if (cylinderPlayers == null)
+        {
+            Debug.LogError("❌ cylinderPlayers es null en GuardarMaterialesOriginales");
+            return;
+        }
+        
+        Debug.Log("💾 Guardando materiales originales...");
         
         // Solo guardar los primeros 4 hijos (personajes)
         int maxPersonajes = Mathf.Min(cylinderPlayers.transform.childCount, 4);
         for (int i = 0; i < maxPersonajes; i++)
         {
             Transform hijo = cylinderPlayers.transform.GetChild(i);
+            Debug.Log($"  Procesando hijo {i}: {hijo.name}");
+            
             Renderer[] renderers = hijo.GetComponentsInChildren<Renderer>();
+            Debug.Log($"    - Renderers encontrados: {renderers.Length}");
+            
             if (renderers.Length > 0)
             {
                 Material[] materiales = new Material[renderers.Length];
                 for (int j = 0; j < renderers.Length; j++)
                 {
-                    materiales[j] = renderers[j].material;
+                    if (renderers[j].sharedMaterial != null)
+                    {
+                        // Crear copia del material para no modificar el original
+                        materiales[j] = new Material(renderers[j].sharedMaterial);
+                        renderers[j].material = materiales[j];
+                        Debug.Log($"      ✓ Material {j} guardado: {materiales[j].name}, Shader: {materiales[j].shader.name}");
+                    }
+                    else
+                    {
+                        Debug.LogWarning($"      ⚠ Renderer {j} ({renderers[j].name}) no tiene sharedMaterial");
+                    }
                 }
                 materialesOriginales[hijo.gameObject] = materiales;
             }
         }
+        
+        Debug.Log($"✅ Materiales guardados para {materialesOriginales.Count} personajes");
     }
     
     /// <summary>
@@ -325,7 +371,14 @@ public class ControlCylinder : NetworkBehaviour
         // Actualizar estado (con validación de red)
         if (textoEstadoPersonaje != null)
         {
-            if (PersonajeYaSeleccionado(nombrePersonaje))
+            // PRIORIDAD 1: Verificar caché local primero
+            if (!string.IsNullOrEmpty(miPersonajeSeleccionado) && nombrePersonaje == miPersonajeSeleccionado)
+            {
+                textoEstadoPersonaje.text = "✓ TU SELECCIÓN";
+                textoEstadoPersonaje.color = colorMiSeleccion;
+            }
+            // PRIORIDAD 2: Verificar diccionario de red
+            else if (PersonajeYaSeleccionado(nombrePersonaje))
             {
                 string usuario = ObtenerUsuarioDelPersonaje(nombrePersonaje);
                 bool esMiSeleccion = !string.IsNullOrEmpty(miNombreUsuario) && usuario == miNombreUsuario;
@@ -354,52 +407,59 @@ public class ControlCylinder : NetworkBehaviour
     /// </summary>
     private void AplicarEfectoVisualPersonaje(string nombrePersonaje, string nombreUsuario)
     {
-        if (cylinderPlayers == null) return;
-        
-        // Buscar el personaje por nombre
-        foreach (Transform hijo in cylinderPlayers.transform)
+        if (cylinderPlayers == null)
         {
+            Debug.LogError("cylinderPlayers es null en AplicarEfectoVisualPersonaje");
+            return;
+        }
+        
+        Debug.Log($"🔍 Buscando personaje '{nombrePersonaje}' para aplicar efectos visuales...");
+        
+        // Solo buscar en los primeros 4 hijos (personajes)
+        int maxPersonajes = Mathf.Min(cylinderPlayers.transform.childCount, 4);
+        for (int i = 0; i < maxPersonajes; i++)
+        {
+            Transform hijo = cylinderPlayers.transform.GetChild(i);
+            Debug.Log($"  - Hijo {i}: '{hijo.name}'");
+            
             if (hijo.name == nombrePersonaje)
             {
                 bool esMiSeleccion = nombreUsuario == miNombreUsuario;
                 Color colorAplicar = esMiSeleccion ? colorMiSeleccion : colorOcupado;
                 
+                Debug.Log($"✅ Personaje encontrado! Aplicando color {colorAplicar} (Mi selección: {esMiSeleccion}, Mi usuario: '{miNombreUsuario}')");
+                
                 // Aplicar color a todos los renderers del personaje
                 Renderer[] renderers = hijo.GetComponentsInChildren<Renderer>();
+                Debug.Log($"  Renderers encontrados: {renderers.Length}");
+                
                 foreach (Renderer renderer in renderers)
                 {
-                    // Crear nuevo material con color modificado
-                    Material nuevoMaterial = new Material(renderer.material);
-                    nuevoMaterial.color = colorAplicar;
-                    renderer.material = nuevoMaterial;
+                    // Modificar directamente el material existente
+                    if (renderer.material != null)
+                    {
+                        renderer.material.color = colorAplicar;
+                        Debug.Log($"    ✓ Color aplicado a {renderer.name}: {renderer.material.color}");
+                        
+                        // Añadir emisión si está disponible
+                        if (renderer.material.HasProperty("_EmissionColor"))
+                        {
+                            renderer.material.EnableKeyword("_EMISSION");
+                            renderer.material.SetColor("_EmissionColor", colorAplicar * 0.5f);
+                            Debug.Log($"    ✓ Emisión aplicada");
+                        }
+                    }
+                    else
+                    {
+                        Debug.LogWarning($"    ⚠ Renderer {renderer.name} no tiene material");
+                    }
                 }
                 
-                // Añadir outline si está disponible (opcional)
-                AgregarOutline(hijo.gameObject, colorAplicar);
-                
-                break;
+                return;
             }
         }
-    }
-    
-    /// <summary>
-    /// Agrega un outline al personaje (requiere shader o componente específico)
-    /// </summary>
-    private void AgregarOutline(GameObject personaje, Color color)
-    {
-        // Esta es una implementación básica
-        // Para un outline real, necesitarías un shader específico o el paquete "Quick Outline"
         
-        // Opción simple: añadir un glow con emisión
-        Renderer[] renderers = personaje.GetComponentsInChildren<Renderer>();
-        foreach (Renderer renderer in renderers)
-        {
-            if (renderer.material.HasProperty("_EmissionColor"))
-            {
-                renderer.material.EnableKeyword("_EMISSION");
-                renderer.material.SetColor("_EmissionColor", color * 0.3f);
-            }
-        }
+        Debug.LogWarning($"❌ No se encontró el personaje '{nombrePersonaje}' entre los {maxPersonajes} hijos");
     }
     
     /// <summary>
@@ -432,20 +492,4 @@ public class ControlCylinder : NetworkBehaviour
         }
     }
     
-    /// <summary>
-    /// Restaura los materiales originales de un personaje
-    /// </summary>
-    private void RestaurarMaterialesOriginales(GameObject personaje)
-    {
-        if (materialesOriginales.ContainsKey(personaje))
-        {
-            Renderer[] renderers = personaje.GetComponentsInChildren<Renderer>();
-            Material[] materiales = materialesOriginales[personaje];
-            
-            for (int i = 0; i < renderers.Length && i < materiales.Length; i++)
-            {
-                renderers[i].material = materiales[i];
-            }
-        }
-    }
 }
