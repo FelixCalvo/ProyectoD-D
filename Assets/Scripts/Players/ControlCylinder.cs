@@ -90,13 +90,9 @@ public class ControlCylinder : NetworkBehaviour
         int currentCount = personajesSeleccionados.Count;
         if (currentCount != ultimoCountPersonajes)
         {
-            Debug.Log($"🔄 Diccionario cambió: {ultimoCountPersonajes} → {currentCount}");
             ultimoCountPersonajes = currentCount;
-            
-            // Actualizar UI cuando detectamos cambio
             ActualizarUIPersonajeActual();
             
-            // Actualizar botón si eres Host
             if (Object.HasStateAuthority && botonIniciarPartida != null)
             {
                 ActualizarEstadoBoton();
@@ -223,12 +219,10 @@ public class ControlCylinder : NetworkBehaviour
             // Notificar a la red para liberar
             if (Object != null && Object.HasStateAuthority)
             {
-                Debug.Log("🟢 [HOST] Liberando personaje directamente");
                 RPC_LiberarPersonaje(nombrePersonaje);
             }
             else if (Object != null)
             {
-                Debug.Log("🔵 [CLIENT] Solicitando liberación al Host");
                 RPC_SolicitarLiberacion(nombrePersonaje);
             }
             return;
@@ -256,14 +250,6 @@ public class ControlCylinder : NetworkBehaviour
         PlayerPrefs.SetString("NombreUsuario", nombreUsuario);
         PlayerPrefs.Save();
         
-        Debug.Log($"✓ Personaje seleccionado: {nombrePersonaje}");
-        Debug.Log($"✓ Usuario: {nombreUsuario}");
-        if (!string.IsNullOrEmpty(personajeAnterior))
-        {
-            Debug.Log($"🔄 Liberando personaje anterior: {personajeAnterior}");
-        }
-        Debug.Log($"🔍 HasStateAuthority: {Object.HasStateAuthority}, HasInputAuthority: {Object.HasInputAuthority}");
-        
         MostrarMensaje($"✓ Has seleccionado a '{nombrePersonaje}'", true);
         
         // Actualizar UI LOCALMENTE de forma inmediata (antes del RPC)
@@ -277,13 +263,11 @@ public class ControlCylinder : NetworkBehaviour
         if (Object != null && Object.HasStateAuthority)
         {
             // Si eres el Host, ejecuta directamente
-            Debug.Log("🟢 [HOST] Ejecutando selección directamente");
             RPC_SeleccionarPersonaje(nombrePersonaje, nombreUsuario, personajeAnterior);
         }
         else if (Object != null)
         {
-            // Si eres cliente, solicita al host (cambio: Proxies puede llamar a StateAuthority)
-            Debug.Log("🔵 [CLIENT] Solicitando selección al Host");
+            // Si eres cliente, solicita al host
             RPC_SolicitarSeleccion(nombrePersonaje, nombreUsuario, personajeAnterior);
         }
     }
@@ -294,13 +278,6 @@ public class ControlCylinder : NetworkBehaviour
     [Rpc(RpcSources.Proxies, RpcTargets.StateAuthority)]
     private void RPC_SolicitarSeleccion(NetworkString<_32> nombrePersonaje, NetworkString<_32> nombreUsuario, NetworkString<_32> personajeAnterior)
     {
-        Debug.Log($"🔵 [HOST] Recibió solicitud de selección: {nombrePersonaje.Value} por {nombreUsuario.Value}");
-        if (!string.IsNullOrEmpty(personajeAnterior.Value))
-        {
-            Debug.Log($"🔄 [HOST] Liberando personaje anterior: {personajeAnterior.Value}");
-        }
-        
-        // El host recibe la solicitud y la propaga a todos
         RPC_SeleccionarPersonaje(nombrePersonaje, nombreUsuario, personajeAnterior);
     }
     
@@ -310,7 +287,6 @@ public class ControlCylinder : NetworkBehaviour
     [Rpc(RpcSources.Proxies, RpcTargets.StateAuthority)]
     private void RPC_SolicitarLiberacion(NetworkString<_32> nombrePersonaje)
     {
-        Debug.Log($"🔵 [HOST] Recibió solicitud de liberación: {nombrePersonaje.Value}");
         RPC_LiberarPersonaje(nombrePersonaje);
     }
     
@@ -323,12 +299,8 @@ public class ControlCylinder : NetworkBehaviour
         if (personajesSeleccionados.ContainsKey(nombrePersonaje))
         {
             personajesSeleccionados.Remove(nombrePersonaje);
-            Debug.Log($"🔓 [RED] Personaje '{nombrePersonaje.Value}' liberado (Total: {personajesSeleccionados.Count})");
-            
-            // Actualizar UI
             ActualizarUIPersonajeActual();
             
-            // Actualizar botón si eres Host
             if (Object.HasStateAuthority && botonIniciarPartida != null)
             {
                 ActualizarEstadoBoton();
@@ -346,15 +318,12 @@ public class ControlCylinder : NetworkBehaviour
         if (!string.IsNullOrEmpty(personajeAnterior.Value) && personajesSeleccionados.ContainsKey(personajeAnterior))
         {
             personajesSeleccionados.Remove(personajeAnterior);
-            Debug.Log($"🔓 [RED] Personaje '{personajeAnterior.Value}' liberado");
         }
         
         // Agregar nuevo personaje al diccionario sincronizado
         personajesSeleccionados.Add(nombrePersonaje, nombreUsuario);
         
-        Debug.Log($"🌐 [RED] Personaje '{nombrePersonaje.Value}' seleccionado por '{nombreUsuario.Value}' (Total: {personajesSeleccionados.Count})");
-        
-        // Forzar actualización inmediata de UI
+        // Actualizar UI
         ActualizarUIPersonajeActual();
         
         // Actualizar botón si eres Host
@@ -578,8 +547,6 @@ public class ControlCylinder : NetworkBehaviour
                 textoBotonIniciar.color = Color.white;
             }
         }
-        
-        Debug.Log($"🔘 Botón actualizado - Seleccionados: {personajesSeleccionadosCount}/4, Activado: {todosSeleccionaron}");
     }
     
     /// <summary>
@@ -601,20 +568,11 @@ public class ControlCylinder : NetworkBehaviour
             return;
         }
         
-        Debug.Log("🎮 Iniciando partida...");
         MostrarMensaje("🎮 Iniciando partida...", true);
         
-        // Cargar escena NewGame para todos los clientes
-        RPC_CargarEscenaNewGame();
-    }
-    
-    /// <summary>
-    /// RPC para cargar la escena NewGame en todos los clientes
-    /// </summary>
-    [Rpc(RpcSources.StateAuthority, RpcTargets.All)]
-    private void RPC_CargarEscenaNewGame()
-    {
-        SceneManager.LoadScene("NewGame");
+        // Cargar escena NewGame usando Fusion (preserva NetworkRunner)
+        SceneRef newGameScene = SceneRef.FromIndex(3);
+        Runner.LoadScene(newGameScene);
     }
     
 }

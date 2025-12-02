@@ -2,6 +2,7 @@ using Fusion;
 using Fusion.Sockets;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -38,16 +39,27 @@ public class BasicSpawner : MonoBehaviour, INetworkRunnerCallbacks
     private NetworkRunner _runner;
     private List<SessionInfo> _sessions = new List<SessionInfo>();
 
-    void Start()
+    async void Start()
     {
         // Verificar si ya existe un NetworkRunner activo (creado desde NetworkSessionStarter)
         NetworkRunner existingRunner = NetworkSessionStarter.GetRunner();
         
         if (existingRunner != null && existingRunner.IsRunning)
         {
-            Debug.Log("✓ NetworkRunner ya existe y está activo, reutilizándolo");
             _runner = existingRunner;
             _runner.AddCallbacks(this);
+            
+            // Spawnear jugadores que ya están conectados
+            if (_runner.IsServer)
+            {
+                foreach (var player in _runner.ActivePlayers)
+                {
+                    if (!_spawnedCharacters.ContainsKey(player))
+                    {
+                        await SpawnPlayerAsync(_runner, player);
+                    }
+                }
+            }
             return;
         }
         
@@ -55,18 +67,28 @@ public class BasicSpawner : MonoBehaviour, INetworkRunnerCallbacks
         existingRunner = FindFirstObjectByType<NetworkRunner>();
         if (existingRunner != null && existingRunner.IsRunning)
         {
-            Debug.LogWarning("Ya existe un NetworkRunner activo en la escena");
             _runner = existingRunner;
+            _runner.AddCallbacks(this);
+            
+            // Spawnear jugadores que ya están conectados
+            if (_runner.IsServer)
+            {
+                foreach (var player in _runner.ActivePlayers)
+                {
+                    if (!_spawnedCharacters.ContainsKey(player))
+                    {
+                        await SpawnPlayerAsync(_runner, player);
+                    }
+                }
+            }
             return;
         }
 
-        // Si llegamos aquí, no hay sesión activa (no debería pasar con el nuevo flujo)
+        // Fallback: iniciar sesión desde PlayerPrefs (flujo antiguo)
         Debug.LogWarning("⚠ No se encontró sesión de red activa. Verifica el flujo de inicio.");
         
         string tipoPartida = PlayerPrefs.GetString("TipoPartida", "");
         string nombrePartida = PlayerPrefs.GetString("NombrePartida", "");
-
-        Debug.Log($"BasicSpawner.Start() - Tipo: {tipoPartida}, Nombre: {nombrePartida}");
 
         if (tipoPartida == "Host")
         {
@@ -75,10 +97,6 @@ public class BasicSpawner : MonoBehaviour, INetworkRunnerCallbacks
         else if (tipoPartida == "Client" && !string.IsNullOrEmpty(nombrePartida))
         {
             StartGame(GameMode.Client, nombrePartida);
-        }
-        else
-        {
-            Debug.LogWarning("No se encontró información de partida");
         }
     }
 
@@ -227,15 +245,32 @@ public class BasicSpawner : MonoBehaviour, INetworkRunnerCallbacks
     }
 
 
-    public void OnPlayerJoined(NetworkRunner runner, PlayerRef player)
+    private async System.Threading.Tasks.Task SpawnPlayerAsync(NetworkRunner runner, PlayerRef player)
+    {
+        if (_playerPrefab == null)
+        {
+            Debug.LogError("❌ _playerPrefab es NULL! Asigna el prefab en el Inspector");
+            return;
+        }
+        
+        Vector3 spawnPosition = new Vector3((player.RawEncoded % runner.Config.Simulation.PlayerCount) * 10, 1, 20);
+        NetworkObject networkPlayerObject = await runner.SpawnAsync(_playerPrefab, spawnPosition, Quaternion.identity, player);
+        
+        if (networkPlayerObject != null)
+        {
+            _spawnedCharacters.Add(player, networkPlayerObject);
+        }
+        else
+        {
+            Debug.LogError($"❌ Error al spawnear jugador {player.PlayerId}");
+        }
+    }
+    
+    public async void OnPlayerJoined(NetworkRunner runner, PlayerRef player)
     {
         if (runner.IsServer)
         {
-            // Create a unique position for the player
-            Vector3 spawnPosition = new Vector3((player.RawEncoded % runner.Config.Simulation.PlayerCount) * 10, 1, 20);
-            NetworkObject networkPlayerObject = runner.Spawn(_playerPrefab, spawnPosition, Quaternion.identity, player);
-            // Keep track of the player avatars for easy access
-            _spawnedCharacters.Add(player, networkPlayerObject);
+            await SpawnPlayerAsync(runner, player);
         }
     }
 
