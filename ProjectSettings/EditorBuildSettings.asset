@@ -15,6 +15,9 @@ EditorBuildSettings:
     path: Assets/Scenes/ListGames.unity
     guid: 904f38e8c269fac4ca367f911372137a
   - enabled: 1
+    path: Assets/Scenes/Players.unity
+    guid: e2bcc65b8cb73884ba38ffcfecba1bd7
+  - enabled: 1
     path: Assets/Scenes/NewGame.unity
     guid: 99c9720ab356a0642a771bea13969a05
   - enabled: 1

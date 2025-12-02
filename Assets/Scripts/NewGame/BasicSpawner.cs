@@ -119,9 +119,14 @@ public class BasicSpawner : MonoBehaviour, INetworkRunnerCallbacks
             SessionName = sessionName,
             Scene = scene,
             SceneManager = sceneManager,
+            PlayerCount = 4,  // Máximo de jugadores (cambia este valor según necesites: 2, 4, 6, 8, etc.)
             IsVisible = true,
             IsOpen = true,
             SessionProperties = new Dictionary<string, SessionProperty>()
+            {
+                // Propiedades personalizadas de la sesión (opcional)
+                // Ejemplos: ["Map"] = "Dungeon1", ["Difficulty"] = "Normal", etc.
+            }
         });
 
         if (!result.Ok)
