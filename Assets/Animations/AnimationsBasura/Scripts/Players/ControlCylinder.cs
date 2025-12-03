@@ -73,6 +73,13 @@ public class ControlCylinder : NetworkBehaviour
     {
         base.Spawned();
         
+        // Registrar nombre de usuario en el registry
+        string nombreUsuario = PlayerPrefs.GetString("NombreUsuario", "");
+        if (!string.IsNullOrEmpty(nombreUsuario) && PlayerUserNameRegistry.Instance != null)
+        {
+            PlayerUserNameRegistry.Instance.RPC_RegisterPlayer(Object.InputAuthority.PlayerId, nombreUsuario);
+        }
+        
         // Actualizar UI con información de red (incluye valores existentes al unirse)
         ActualizarUIPersonajeActual();
         
@@ -250,6 +257,9 @@ public class ControlCylinder : NetworkBehaviour
         PlayerPrefs.SetString("NombreUsuario", nombreUsuario);
         PlayerPrefs.Save();
         
+        // Guardar en el sistema de selección global
+        PlayerCharacterSelection.SetSelection(nombreUsuario, nombrePersonaje);
+        
         MostrarMensaje($"✓ Has seleccionado a '{nombrePersonaje}'", true);
         
         // Actualizar UI LOCALMENTE de forma inmediata (antes del RPC)
@@ -322,6 +332,9 @@ public class ControlCylinder : NetworkBehaviour
         
         // Agregar nuevo personaje al diccionario sincronizado
         personajesSeleccionados.Add(nombrePersonaje, nombreUsuario);
+        
+        // Guardar selección en el sistema global (importante para el spawn)
+        PlayerCharacterSelection.SetSelection(nombreUsuario.Value, nombrePersonaje.Value);
         
         // Actualizar UI
         ActualizarUIPersonajeActual();

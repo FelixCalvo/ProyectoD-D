@@ -9,7 +9,13 @@ using UnityEngine.SceneManagement;
 public class BasicSpawner : MonoBehaviour, INetworkRunnerCallbacks
 {
     [Header("Network")]
-    [SerializeField] private NetworkPrefabRef _playerPrefab;
+    [SerializeField] private NetworkPrefabRef _playerPrefab; // Prefab genérico (deprecated)
+    
+    [Header("Prefabs de Personajes")]
+    [SerializeField] private NetworkPrefabRef _paladinPrefab;
+    [SerializeField] private NetworkPrefabRef _brujaPrefab;
+    [SerializeField] private NetworkPrefabRef _arqueraPrefab;
+    [SerializeField] private NetworkPrefabRef _cirujanoBarberoPrefab;
 
     [Header("UI")]
     [SerializeField] private ListaPartidasUI listaPartidasUI;
@@ -247,23 +253,72 @@ public class BasicSpawner : MonoBehaviour, INetworkRunnerCallbacks
 
     private async System.Threading.Tasks.Task SpawnPlayerAsync(NetworkRunner runner, PlayerRef player)
     {
-        if (_playerPrefab == null)
+        // Obtener el nombre de usuario del jugador
+        string userName = null;
+        if (PlayerUserNameRegistry.Instance != null)
         {
-            Debug.LogError("❌ _playerPrefab es NULL! Asigna el prefab en el Inspector");
+            userName = PlayerUserNameRegistry.Instance.GetUserName(player);
+        }
+        
+        // Obtener el personaje seleccionado
+        string characterName = null;
+        if (!string.IsNullOrEmpty(userName))
+        {
+            characterName = PlayerCharacterSelection.GetSelection(userName);
+        }
+        
+        // Seleccionar el prefab correcto según el personaje
+        NetworkPrefabRef prefabToSpawn = GetPrefabForCharacter(characterName);
+        
+        if (prefabToSpawn.IsValid == false)
+        {
+            Debug.LogError($"❌ No hay prefab válido para el personaje '{characterName}' del usuario '{userName}'");
             return;
         }
         
         Vector3 spawnPosition = new Vector3((player.RawEncoded % runner.Config.Simulation.PlayerCount) * 10, 1, 20);
-        NetworkObject networkPlayerObject = await runner.SpawnAsync(_playerPrefab, spawnPosition, Quaternion.identity, player);
+        NetworkObject networkPlayerObject = await runner.SpawnAsync(prefabToSpawn, spawnPosition, Quaternion.identity, player);
         
         if (networkPlayerObject != null)
         {
             _spawnedCharacters.Add(player, networkPlayerObject);
+            Debug.Log($"✅ Jugador {player.PlayerId} ({userName}) spawneado como '{characterName}'");
         }
         else
         {
             Debug.LogError($"❌ Error al spawnear jugador {player.PlayerId}");
         }
+    }
+    
+    private NetworkPrefabRef GetPrefabForCharacter(string characterName)
+    {
+        if (string.IsNullOrEmpty(characterName))
+        {
+            Debug.LogWarning("⚠️ Personaje no seleccionado, usando prefab genérico");
+            return _playerPrefab;
+        }
+        
+        // Los nombres deben coincidir con los nombres de los GameObjects en el cilindro
+        // Ejemplo: "Player_Paladin (0)", "Player_Bruja (2)", etc.
+        if (characterName.Contains("Paladin") || characterName.Contains("Paladín"))
+        {
+            return _paladinPrefab;
+        }
+        else if (characterName.Contains("Bruja"))
+        {
+            return _brujaPrefab;
+        }
+        else if (characterName.Contains("Arquera"))
+        {
+            return _arqueraPrefab;
+        }
+        else if (characterName.Contains("Cirujano") || characterName.Contains("Barbero"))
+        {
+            return _cirujanoBarberoPrefab;
+        }
+        
+        Debug.LogWarning($"⚠️ Personaje '{characterName}' no reconocido, usando prefab genérico");
+        return _playerPrefab;
     }
     
     public async void OnPlayerJoined(NetworkRunner runner, PlayerRef player)

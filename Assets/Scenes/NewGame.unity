@@ -1030,6 +1030,15 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _playerPrefab:
     RawGuidValue: eac14f06d6ade20478ab4ab9bf1c5bf7
+  _paladinPrefab:
+    RawGuidValue: 7ef6f4d8c74c0d54ab9835b8a0a8b8c6
+  _brujaPrefab:
+    RawGuidValue: 00000000000000000000000000000000
+  _arqueraPrefab:
+    RawGuidValue: 00000000000000000000000000000000
+  _cirujanoBarberoPrefab:
+    RawGuidValue: 00000000000000000000000000000000
+  listaPartidasUI: {fileID: 0}
 --- !u!4 &1789108086
 Transform:
   m_ObjectHideFlags: 0
