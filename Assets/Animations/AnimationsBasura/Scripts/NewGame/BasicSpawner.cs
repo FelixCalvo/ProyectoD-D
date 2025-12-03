@@ -253,11 +253,29 @@ public class BasicSpawner : MonoBehaviour, INetworkRunnerCallbacks
 
     private async System.Threading.Tasks.Task SpawnPlayerAsync(NetworkRunner runner, PlayerRef player)
     {
-        // Obtener el nombre de usuario del jugador
+        // Esperar a que el userName esté registrado (máximo 5 segundos)
         string userName = null;
-        if (PlayerUserNameRegistry.Instance != null)
+        int intentos = 0;
+        const int maxIntentos = 50; // 50 intentos x 100ms = 5 segundos
+        
+        while (intentos < maxIntentos)
         {
-            userName = PlayerUserNameRegistry.Instance.GetUserName(player);
+            if (PlayerUserNameRegistry.Instance != null)
+            {
+                userName = PlayerUserNameRegistry.Instance.GetUserName(player);
+                if (!string.IsNullOrEmpty(userName))
+                {
+                    break;
+                }
+            }
+            
+            intentos++;
+            await System.Threading.Tasks.Task.Delay(100);
+        }
+        
+        if (string.IsNullOrEmpty(userName))
+        {
+            Debug.LogWarning($"⚠️ No se encontró userName para Player {player.PlayerId}");
         }
         
         // Obtener el personaje seleccionado
@@ -276,17 +294,31 @@ public class BasicSpawner : MonoBehaviour, INetworkRunnerCallbacks
             return;
         }
         
-        Vector3 spawnPosition = new Vector3((player.RawEncoded % runner.Config.Simulation.PlayerCount) * 10, 1, 20);
+        // Centrar en terrain 50x50 con spawn en círculo
+        float angle = (player.PlayerId - 1) * (360f / 4); // 4 jugadores en círculo
+        float radius = 5f; // Radio del círculo de spawn
+        float centerX = 25f; // Centro del terrain (50/2)
+        float centerZ = 25f; // Centro del terrain (50/2)
+        
+        Vector3 spawnPosition = new Vector3(
+            centerX + Mathf.Cos(angle * Mathf.Deg2Rad) * radius,
+            1f, // Altura sobre el terrain
+            centerZ + Mathf.Sin(angle * Mathf.Deg2Rad) * radius
+        );
+        
         NetworkObject networkPlayerObject = await runner.SpawnAsync(prefabToSpawn, spawnPosition, Quaternion.identity, player);
+        
+        await System.Threading.Tasks.Task.Delay(100);
         
         if (networkPlayerObject != null)
         {
             _spawnedCharacters.Add(player, networkPlayerObject);
-            Debug.Log($"✅ Jugador {player.PlayerId} ({userName}) spawneado como '{characterName}'");
+            Debug.Log($"✅ {userName} spawneado como {characterName} en {spawnPosition}");
+            networkPlayerObject.transform.hasChanged = true;
         }
         else
         {
-            Debug.LogError($"❌ Error al spawnear jugador {player.PlayerId}");
+            Debug.LogError($"❌ Error al spawnear Player {player.PlayerId}");
         }
     }
     

@@ -73,11 +73,26 @@ public class ControlCylinder : NetworkBehaviour
     {
         base.Spawned();
         
-        // Registrar nombre de usuario en el registry
+        // CADA cliente registra su propio nombre usando Runner.LocalPlayer
         string nombreUsuario = PlayerPrefs.GetString("NombreUsuario", "");
-        if (!string.IsNullOrEmpty(nombreUsuario) && PlayerUserNameRegistry.Instance != null)
+        if (string.IsNullOrEmpty(nombreUsuario))
         {
-            PlayerUserNameRegistry.Instance.RPC_RegisterPlayer(Object.InputAuthority.PlayerId, nombreUsuario);
+            // Si no hay nombre guardado, generar uno temporal
+            nombreUsuario = $"Jugador{Random.Range(1000, 9999)}";
+            PlayerPrefs.SetString("NombreUsuario", nombreUsuario);
+            PlayerPrefs.Save();
+            Debug.LogWarning($"⚠️ No había nombre guardado, usando temporal: {nombreUsuario}");
+        }
+        
+        // Registrar usando el PlayerRef LOCAL de este cliente
+        if (PlayerUserNameRegistry.Instance != null && Runner != null)
+        {
+            int myPlayerId = Runner.LocalPlayer.PlayerId;
+            PlayerUserNameRegistry.Instance.RPC_RegisterPlayer(myPlayerId, nombreUsuario);
+        }
+        else
+        {
+            Debug.LogError("❌ PlayerUserNameRegistry no disponible");
         }
         
         // Actualizar UI con información de red (incluye valores existentes al unirse)
@@ -202,11 +217,25 @@ public class ControlCylinder : NetworkBehaviour
         if (inputNombreUsuario != null && !string.IsNullOrEmpty(inputNombreUsuario.text))
         {
             nombreUsuario = inputNombreUsuario.text;
+            
+            // ✨ IMPORTANTE: Guardar el nombre INMEDIATAMENTE cuando se selecciona
+            PlayerPrefs.SetString("NombreUsuario", nombreUsuario);
+            PlayerPrefs.Save();
+            
+            // RE-REGISTRAR en el registry con el nombre actualizado
+            if (PlayerUserNameRegistry.Instance != null && Runner != null)
+            {
+                int myPlayerId = Runner.LocalPlayer.PlayerId;
+                Debug.Log($"🔄 RE-Registrando jugador: Player {myPlayerId} = '{nombreUsuario}'");
+                PlayerUserNameRegistry.Instance.RPC_RegisterPlayer(myPlayerId, nombreUsuario);
+            }
         }
         else
         {
             Debug.LogWarning("InputField de nombre de usuario no asignado o vacío. Usando nombre por defecto.");
             nombreUsuario = "Jugador" + Random.Range(1000, 9999);
+            PlayerPrefs.SetString("NombreUsuario", nombreUsuario);
+            PlayerPrefs.Save();
         }
         
         // Verificar si este usuario ya tiene un personaje seleccionado

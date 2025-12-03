@@ -1031,13 +1031,13 @@ MonoBehaviour:
   _playerPrefab:
     RawGuidValue: eac14f06d6ade20478ab4ab9bf1c5bf7
   _paladinPrefab:
-    RawGuidValue: 7ef6f4d8c74c0d54ab9835b8a0a8b8c6
+    RawGuidValue: 2fa079f4f9ca61742b2fa0e0a8e8adc9
   _brujaPrefab:
-    RawGuidValue: 00000000000000000000000000000000
+    RawGuidValue: c5c020fd96216c544957d9359e39424f
   _arqueraPrefab:
-    RawGuidValue: 00000000000000000000000000000000
+    RawGuidValue: 80666178df469f14688090ca83f65e16
   _cirujanoBarberoPrefab:
-    RawGuidValue: 00000000000000000000000000000000
+    RawGuidValue: 0542d6f9232f59e4f8fc2b4cf1084efd
   listaPartidasUI: {fileID: 0}
 --- !u!4 &1789108086
 Transform:

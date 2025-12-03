@@ -17,7 +17,18 @@ public class PlayerUserNameRegistry : NetworkBehaviour
     public override void Spawned()
     {
         base.Spawned();
-        _instance = this;
+        
+        // Hacer que persista entre escenas
+        if (_instance == null)
+        {
+            _instance = this;
+            DontDestroyOnLoad(gameObject);
+        }
+        else if (_instance != this)
+        {
+            // Ya existe una instancia, destruir esta
+            Destroy(gameObject);
+        }
     }
     
     /// <summary>
@@ -35,6 +46,7 @@ public class PlayerUserNameRegistry : NetworkBehaviour
             playerNames.Remove(playerId);
             playerNames.Add(playerId, userName);
         }
+        UnityEngine.Debug.Log($"📝 Player {playerId}: {userName.Value}");
     }
     
     /// <summary>
