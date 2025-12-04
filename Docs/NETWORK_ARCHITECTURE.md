@@ -34,7 +34,7 @@ El proyecto usa **Photon Fusion 2.x** con arquitectura **Server-Authoritative** 
 ## 📦 Componentes de Red
 
 ### NetworkObject
-Identifica un objeto como parte de la simulación de red.
+Identifica un objeto como parte de la simulación de red. Lo tiene por ejemplo el padre de los player para indicar a fusión que los maneje. Mirar NetworkProjectConfig de fusión, ahí aparecen los prefabs.
 
 **Configuración**:
 ```
@@ -58,7 +58,7 @@ NetworkTransform
 └── Auto AOI Override: Yes
 ```
 
-**Importante**: Solo sincroniza el transform raíz, NO el hijo visual.
+**Importante**: Solo sincroniza el transform raíz(padre), NO EL HIJO VISUAL!!!.
 
 ### NetworkBehaviour
 Clase base para scripts que necesitan funcionalidad de red.

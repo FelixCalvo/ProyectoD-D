@@ -140,7 +140,7 @@ Paladin (por ejemplo)
 - **Interpolation**: Default
 - **Sync Parent**: Ninguno
 
-## 📊 Flujo de Datos en Red
+ 
 
 ### 1. Input
 ```
@@ -258,4 +258,4 @@ Render():
 - **Engine**: Unity 2025.x
 - **Networking**: Photon Fusion 2.x
 - **Modelos**: Mixamo
-- **Desarrollador**: CIFO Team
+- **Desarrollador**: Felix & Claude Sonnet
