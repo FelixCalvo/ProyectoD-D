@@ -1,45 +1,57 @@
 using Fusion;
 using UnityEngine;
 
+/// <summary>
+/// Controlador del personaje jugador en red usando Photon Fusion.
+/// Maneja movimiento, rotación y sincronización de animaciones en multiplayer.
+/// 
+/// SOLUCIÓN AL PROBLEMA DEL PIVOT:
+/// - El transform raíz se mueve en línea recta SIN rotar
+/// - El modelo visual (hijo) rota hacia la dirección de movimiento
+/// - Esto evita que un pivot adelantado cause movimiento en semicírculo
+/// </summary>
 public class Player : NetworkBehaviour
 {
+  // ===== COMPONENTES =====
   private Animator _animator;
-  private Transform _visualModel; // Transform del modelo visual (hijo) que rotaremos
+  private Transform _visualModel; // Transform del hijo que contiene el modelo 3D
   
-  // Variable de red para sincronizar el estado de caminar
+  // ===== VARIABLES DE RED (sincronizadas automáticamente) =====
   [Networked] private NetworkBool IsWalking { get; set; }
-  
-  // Variable de red para sincronizar la dirección de movimiento
   [Networked] private Vector3 MoveDirection { get; set; }
   
-  // Variable local para evitar setear el Animator innecesariamente
+  // ===== VARIABLES LOCALES =====
   private bool _lastWalkState = false;
   
+  // ===== CONFIGURACIÓN =====
   [SerializeField] private float moveSpeed = 5f;
 
+  /// <summary>
+  /// Inicialización: busca el Animator y guarda referencia al modelo visual
+  /// </summary>
   private void Awake()
   {
     _animator = GetComponentInChildren<Animator>();
     
     if (_animator == null)
     {
-      Debug.LogWarning($"⚠️ [{gameObject.name}] No se encontró Animator en los hijos");
+      Debug.LogWarning($"[{gameObject.name}] No se encontró Animator en los hijos");
     }
     else
     {
-      Debug.Log($"✅ [{gameObject.name}] Animator encontrado: {_animator.name}");
-      // El modelo visual es el transform del Animator (el hijo)
+      // El modelo visual es el transform que contiene el Animator (hijo del prefab)
       _visualModel = _animator.transform;
     }
   }
 
+  /// <summary>
+  /// Llamado cuando el objeto de red es creado (spawned) en cada cliente
+  /// </summary>
   public override void Spawned()
   {
     base.Spawned();
     
-    Debug.Log($"🎮 [{gameObject.name}] Spawned en cliente. IsLocal: {Object.HasInputAuthority} | StateAuthority: {Object.HasStateAuthority}");
-    
-    // Forzar visibilidad de todos los renderers
+    // Forzar visibilidad de todos los renderers (fix para modelos que no aparecen)
     var renderers = GetComponentsInChildren<Renderer>(true);
     foreach (var renderer in renderers)
     {
@@ -47,7 +59,7 @@ public class Player : NetworkBehaviour
       renderer.gameObject.SetActive(true);
     }
     
-    // Desactivar LOD si existe (puede causar invisibilidad en clientes)
+    // Desactivar LOD que puede causar invisibilidad
     var lodGroups = GetComponentsInChildren<LODGroup>(true);
     foreach (var lod in lodGroups)
     {
@@ -55,33 +67,35 @@ public class Player : NetworkBehaviour
     }
   }
 
+  /// <summary>
+  /// Actualización de física en red (se ejecuta en ticks fijos de Fusion).
+  /// Solo el cliente con StateAuthority modifica posición y dirección.
+  /// </summary>
   public override void FixedUpdateNetwork()
   {
     if (GetInput(out NetworkInputData data))
     {
-      // Verificar si hay movimiento
       bool shouldWalk = data.direction.magnitude > 0.1f;
       
-      // Solo el jugador con StateAuthority mueve el personaje
+      // Solo el cliente con autoridad mueve el personaje
       if (HasStateAuthority && shouldWalk)
       {
-        // Normalizar la dirección del input
         Vector3 direction = data.direction.normalized;
         
-        // Guardar la dirección en variable de red para sincronizar
+        // Sincronizar dirección para que todos los clientes sepan hacia dónde rota
         MoveDirection = direction;
         
-        // MOVER el transform RAÍZ (sin rotar) - NetworkTransform sincronizará esto
+        // Mover SOLO el transform raíz (sin rotar)
+        // NetworkTransform sincronizará automáticamente la posición
         Vector3 movement = direction * moveSpeed * Runner.DeltaTime;
         transform.position += movement;
       }
       
-      // Actualizar el estado de caminar
+      // Actualizar estado de animación
       if (HasStateAuthority && IsWalking != shouldWalk)
       {
         IsWalking = shouldWalk;
         
-        // Si dejamos de caminar, resetear dirección
         if (!shouldWalk)
         {
           MoveDirection = Vector3.zero;
@@ -90,22 +104,27 @@ public class Player : NetworkBehaviour
     }
     else if (HasStateAuthority && IsWalking)
     {
-      // Si no hay input, detener la animación
+      // Sin input, detener animación
       IsWalking = false;
       MoveDirection = Vector3.zero;
     }
   }
   
+  /// <summary>
+  /// Actualización visual (se ejecuta cada frame en TODOS los clientes).
+  /// Sincroniza animaciones y rotación del modelo visual.
+  /// </summary>
   public override void Render()
   {
-    // Sincronizar el Animator con el estado de red en TODOS los clientes
+    // Actualizar parámetro Walk del Animator
     if (_animator != null && _lastWalkState != IsWalking)
     {
       _lastWalkState = IsWalking;
       _animator.SetBool("Walk", IsWalking);
     }
     
-    // ROTAR el modelo visual según la dirección sincronizada (en TODOS los clientes)
+    // Rotar el modelo visual (hijo) hacia la dirección de movimiento
+    // IMPORTANTE: Solo rota el hijo, NO la raíz
     if (_visualModel != null && MoveDirection.magnitude > 0.1f)
     {
       _visualModel.rotation = Quaternion.LookRotation(MoveDirection);
