@@ -283,6 +283,13 @@ public class BasicSpawner : MonoBehaviour, INetworkRunnerCallbacks
         if (!string.IsNullOrEmpty(userName))
         {
             characterName = PlayerCharacterSelection.GetSelection(userName);
+            Debug.Log($"🎭 Selección para '{userName}': '{characterName}'");
+            
+            if (string.IsNullOrEmpty(characterName))
+            {
+                Debug.LogWarning($"⚠️ No hay selección de personaje guardada para '{userName}'");
+                Debug.Log($"📋 Selecciones actuales: {string.Join(", ", PlayerCharacterSelection.GetAllSelections().Select(kvp => $"{kvp.Key}→{kvp.Value}"))}");
+            }
         }
         
         // Seleccionar el prefab correcto según el personaje
@@ -326,9 +333,11 @@ public class BasicSpawner : MonoBehaviour, INetworkRunnerCallbacks
     {
         if (string.IsNullOrEmpty(characterName))
         {
-            Debug.LogWarning("⚠️ Personaje no seleccionado, usando prefab genérico");
+            Debug.LogWarning($"⚠️ Personaje no seleccionado (characterName vacío), usando prefab genérico");
             return _playerPrefab;
         }
+        
+        Debug.Log($"🔍 Buscando prefab para: '{characterName}'");
         
         // Los nombres deben coincidir con los nombres de los GameObjects en el cilindro
         // Ejemplo: "Player_Paladin (0)", "Player_Bruja (2)", etc.
