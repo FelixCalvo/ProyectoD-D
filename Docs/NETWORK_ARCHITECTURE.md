@@ -46,7 +46,7 @@ NetworkObject
 
 **Ubicación**: En la raíz de cada prefab de personaje.
 
-### NetworkTransform
+###    
 Sincroniza automáticamente posición y rotación.
 
 **Configuración actual**:

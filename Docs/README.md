@@ -255,7 +255,7 @@ Render():
 - [ ] UI de HUD
 
 ## 👥 Créditos
-- **Engine**: Unity 2025.x
-- **Networking**: Photon Fusion 2.x
+- **Engine**: Unity 6.0 (6000.0.58f2)
+- **Networking**: Photon Fusion 2.0.8 (estable)
 - **Modelos**: Mixamo
 - **Desarrollador**: Felix & Claude Sonnet

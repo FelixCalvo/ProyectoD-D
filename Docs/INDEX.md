@@ -271,8 +271,8 @@ transform.position += movement;  // Sin verificar authority
 **Documentación creada por**: Felix & Claude Sonnet Team
 **Fecha de creación**: Diciembre 2025
 **Última actualización**: Diciembre 2025
-**Versión Unity**: 2025.x
-**Versión Fusion**: 2.x
+**Versión Unity**: Unity 6.0 (6000.0.58f2)
+**Versión Fusion**: Photon Fusion 2.0.8 (estable)
 
 ---
 

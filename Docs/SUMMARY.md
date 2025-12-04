@@ -345,5 +345,5 @@ Has completado:
 ---
 
 *Documentación finalizada: 4 de diciembre de 2025*
-*Team: CIFO*
-*Proyecto: D&D Multiplayer Game*
+*Team: Felix & Claude Sonnet*
+*Proyecto: D&D - Aquelarre Multiplayer Game*
