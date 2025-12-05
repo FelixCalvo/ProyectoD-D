@@ -325,6 +325,17 @@ public class RTSUnit : MonoBehaviour
         if (target == null || target == this) return;
         
         _currentTarget = target;
+        
+        // Interrumpir animación de ataque anterior si estaba atacando otro objetivo
+        if (_animator != null)
+        {
+            _animator.ResetTrigger("Attack1");
+            _animator.Play("Idle", 0, 0f);
+        }
+        
+        // Resetear tiempo de ataque para permitir nuevo ataque inmediato
+        _lastAttackTime = -999f;
+        
         // UpdateCombat() se encargará de perseguir y atacar automáticamente
     }
     

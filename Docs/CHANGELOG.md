@@ -1,5 +1,331 @@
 # 📋 Changelog del Proyecto
 
+## [v1.1.0] - 5 de Diciembre de 2025
+
+### ✨ Sistema de Combate RTS
+
+**Implementación completa del sistema de combate para modo RTS en Testing**
+
+---
+
+## 🎮 Nuevas Características
+
+### Sistema de Ataque con Animaciones
+**Fecha**: 5 Diciembre 2025
+
+**Características**:
+- Ataque con clic derecho sobre unidades enemigas
+- Persecución automática de objetivos
+- Distancia de ataque configurable (1.5m)
+- Animación Attack1 integrada con cooldown
+- Detección automática de duración de animaciones por personaje
+- Interrupción de ataque al ordenar movimiento
+
+**Implementación**:
+```csharp
+// Detección automática de duración por clip
+private void GetAttackAnimationDuration()
+{
+    foreach (AnimationClip clip in ac.animationClips)
+    {
+        if (clip.name.Contains("Attack1"))
+        {
+            _attackAnimationDuration = clip.length;
+        }
+    }
+}
+
+// Sistema de cooldown basado en tiempo
+if (Time.time >= _lastAttackTime + attackCooldown)
+{
+    _lastAttackTime = Time.time;
+    Attack();
+}
+```
+
+**Parámetros**:
+- `attackRange = 2.5f` (rango máximo de ataque)
+- `attackCooldown = 3.5f` (pausa entre ataques)
+- `stoppingDistance = 1.5f` (distancia al perseguir)
+- Duraciones detectadas: Arquera (1.017s), Cirujano (2.117s), Paladin (1.5s), Bruja (2.117s)
+
+**Archivos Creados**:
+- Mejoras en `Assets/Scripts/RTS/RTSUnit.cs`
+- Mejoras en `Assets/Scripts/RTS/RTSController.cs`
+
+---
+
+## 🐛 Bugs Resueltos
+
+### CRÍTICO: Ataques en Loop Infinito
+**Fecha**: 5 Diciembre 2025
+**Problema**: La animación Attack1 se reproducía infinitamente sin parar.
+
+**Causa**: 
+- Cooldown (1.5s) igual a duración de animación (1.5s)
+- `_lastAttackTime` actualizado después de `Attack()`
+- Verificación redundante de `isInAttackAnimation`
+
+**Solución**:
+1. ✅ Inicializar `_lastAttackTime = -999f` para permitir primer ataque inmediato
+2. ✅ Actualizar `_lastAttackTime` ANTES de `Attack()` para evitar múltiples llamadas
+3. ✅ Aumentar cooldown a 3.5s (mayor que animación más larga: 2.117s)
+4. ✅ Simplificar lógica: solo verificar cooldown
+
+**Archivos Modificados**:
+- `Assets/Scripts/RTS/RTSUnit.cs`
+
+---
+
+### CRÍTICO: Clic Derecho No Detecta Suelo
+**Fecha**: 5 Diciembre 2025
+**Problema**: Clic derecho en el suelo no movía al personaje, solo detectaba clics en unidades.
+
+**Causa**:
+- `groundLayer = ~0` (todas las capas) incluía la capa de unidades
+- Raycast de `unitLayer` interceptaba primero con `else if`
+- Nunca llegaba a verificar `groundLayer`
+
+**Solución**:
+✅ Ejecutar ambos Raycast simultáneamente
+✅ Priorizar unidades con `return` si hay objetivo
+✅ Fallback a movimiento si no hay unidad enemiga
+
+**Implementación**:
+```csharp
+bool hitUnit = Physics.Raycast(ray, out unitHit, 1000f, unitLayer);
+bool hitGround = Physics.Raycast(ray, out groundHit, 1000f, groundLayer);
+
+if (hitUnit && targetUnit != _selectedUnit)
+{
+    _selectedUnit.AttackTarget(targetUnit);
+    return; // Prioridad a ataque
+}
+
+if (hitGround)
+{
+    _selectedUnit.ClearTarget();
+    MoveSelectedUnitTo(groundHit.point);
+}
+```
+
+**Archivos Modificados**:
+- `Assets/Scripts/RTS/RTSController.cs`
+
+---
+
+### MEDIO: Personaje Demasiado Cerca al Atacar
+**Fecha**: 5 Diciembre 2025
+**Problema**: El personaje se colocaba encima del objetivo al atacar, sin mantener distancia.
+
+**Causa**:
+- `stoppingDistance` menor que `attackRange`
+- Sistema estático no respetaba distancia configurada
+
+**Solución**:
+✅ Sistema dinámico de `stoppingDistance`:
+- `0.1f` para movimiento normal (permite movimientos cortos)
+- `1.5f` al perseguir enemigos (mantiene distancia de ataque)
+- Restaurar a `0.1f` al cancelar ataque
+
+**Implementación**:
+```csharp
+// En ChaseTarget() - modo combate
+_agent.stoppingDistance = 1.5f;
+
+// En ClearTarget() - modo normal
+_agent.stoppingDistance = 0.1f;
+```
+
+**Archivos Modificados**:
+- `Assets/Scripts/RTS/RTSUnit.cs`
+
+---
+
+### MEDIO: Radio de "Zona Muerta" al Mover
+**Fecha**: 5 Diciembre 2025
+**Problema**: Clic cerca del personaje (~2m) no activaba movimiento, creando zona muerta.
+
+**Causa**: `stoppingDistance = 2.0f` hacía que NavMeshAgent ignorara destinos cercanos
+
+**Solución**:
+✅ `stoppingDistance` dinámico:
+- Base: `0.1f` (permite movimientos precisos)
+- Combate: `1.5f` (solo al perseguir)
+
+**Archivos Modificados**:
+- `Assets/Scripts/RTS/RTSUnit.cs`
+
+---
+
+### MEDIO: Animación Attack1 No Interrumpible
+**Fecha**: 5 Diciembre 2025
+**Problema**: Al ordenar movimiento durante ataque, la animación Attack1 continuaba hasta completarse.
+
+**Causa**:
+- `_lastAttackTime` aún dentro del tiempo de animación
+- `UpdateAnimation()` mantenía `Walk = false`
+- Animator con `Attack1 → Idle` sin condiciones (solo `HasExitTime`)
+
+**Intentos Fallidos**:
+1. ❌ `ResetTrigger()` + `SetBool("Walk", true)` → No interrumpe HasExitTime
+2. ❌ Transición `Any State → Walk` → Crearía transiciones inesperadas
+
+**Solución Final**:
+✅ Usar `Animator.Play("Idle", 0, 0f)` para forzar estado Idle inmediatamente
+✅ Resetear `_lastAttackTime = -999f` en `ClearTarget()`
+
+**Implementación**:
+```csharp
+public void ClearTarget()
+{
+    _currentTarget = null;
+    _lastAttackTime = -999f; // Permite Walk inmediato
+    
+    if (_animator != null)
+    {
+        _animator.ResetTrigger("Attack1");
+        _animator.Play("Idle", 0, 0f); // Fuerza Idle, interrumpe Attack1
+    }
+    
+    _agent.stoppingDistance = 0.1f;
+    if (_agent.hasPath) _agent.ResetPath();
+}
+```
+
+**Archivos Modificados**:
+- `Assets/Scripts/RTS/RTSUnit.cs`
+
+---
+
+### MEDIO: Persecución Bloqueada por IsPositionOccupied
+**Fecha**: 5 Diciembre 2025
+**Problema**: Al perseguir enemigo, el personaje se movía a posiciones alternas lejos del objetivo.
+
+**Causa**: 
+- `MoveTo()` verificaba `IsPositionOccupied()`
+- Detectaba al objetivo como obstáculo
+- Buscaba posición libre alternativa lejos del enemigo
+
+**Solución**:
+✅ Crear método `ChaseTarget()` separado sin verificación de ocupación
+✅ `UpdateCombat()` llama a `ChaseTarget()` cada frame para persecución continua
+✅ `MoveTo()` solo para movimiento normal al suelo
+
+**Implementación**:
+```csharp
+// Para combate - sin verificar ocupación
+private void ChaseTarget(Vector3 targetPosition)
+{
+    _agent.stoppingDistance = 1.5f;
+    _agent.SetDestination(targetPosition);
+}
+
+// Para movimiento normal - verifica obstáculos
+public void MoveTo(Vector3 destination)
+{
+    if (!IsPositionOccupied(destination))
+        _agent.SetDestination(destination);
+    else
+        _agent.SetDestination(FindNearbyFreePosition(destination));
+}
+```
+
+**Archivos Modificados**:
+- `Assets/Scripts/RTS/RTSUnit.cs`
+
+---
+
+## 🔧 Mejoras Técnicas
+
+### Gestión de Animaciones en Combate
+**Fecha**: 5 Diciembre 2025
+
+**Mejoras**:
+- Detección automática de duración por clip de animación
+- Control basado en tiempo en lugar de queries a AnimatorStateInfo
+- Sistema de cooldown independiente de duración de animación
+- Prevención de Walk durante Attack1 con ventana temporal
+
+**Antes**:
+```csharp
+// Complejo, propenso a errores
+AnimatorStateInfo stateInfo = _animator.GetCurrentAnimatorStateInfo(0);
+if (stateInfo.IsName("Attack1")) { ... }
+```
+
+**Después**:
+```csharp
+// Simple, confiable
+bool isPlayingAttack = (Time.time < _lastAttackTime + _attackAnimationDuration);
+if (!isPlayingAttack)
+{
+    _animator.SetBool("Walk", isMoving);
+}
+```
+
+---
+
+### Sistema de Persecución Continua
+**Fecha**: 5 Diciembre 2025
+
+**Implementación**:
+- `UpdateCombat()` actualiza destino cada frame
+- `ChaseTarget()` con `stoppingDistance` dinámico
+- Detección de rango para alternar entre perseguir y atacar
+
+```csharp
+private void UpdateCombat()
+{
+    if (_currentTarget != null)
+    {
+        float distance = Vector3.Distance(transform.position, _currentTarget.transform.position);
+        
+        if (distance <= attackRange)
+        {
+            // Detener y atacar
+            if (_agent.hasPath) _agent.ResetPath();
+            if (Time.time >= _lastAttackTime + attackCooldown) Attack();
+        }
+        else
+        {
+            // Perseguir continuamente
+            ChaseTarget(_currentTarget.transform.position);
+        }
+    }
+}
+```
+
+---
+
+## 📊 Configuración Final
+
+### RTSUnit.cs
+```csharp
+[Header("Combat")]
+[SerializeField] private float attackRange = 2.5f;      // Rango máximo de ataque
+[SerializeField] private float attackCooldown = 3.5f;   // Pausa entre ataques
+[SerializeField] private LayerMask enemyLayer;
+
+// NavMeshAgent
+_agent.stoppingDistance = 0.1f;  // Base (se ajusta a 1.5f en combate)
+_agent.speed = 5f;
+_agent.radius = 0.3f;
+```
+
+### Animator Controller
+- **Any State → Attack1**: Trigger "Attack1"
+- **Attack1 → Idle**: Sin condiciones, `HasExitTime = true`
+- **Idle ↔ Walk**: Bool "Walk", `HasExitTime = false`
+
+### Duraciones de Animación Detectadas
+- Arquera: 1.017s
+- Cirujano Barbero: 2.117s
+- Paladin: 1.5s
+- Bruja: 2.117s
+
+---
+
 ## [v1.0.0] - 4 de Diciembre de 2025
 
 ### 🎉 Primera Versión Estable
