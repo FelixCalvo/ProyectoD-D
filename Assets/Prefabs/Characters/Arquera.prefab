@@ -1107,8 +1107,9 @@ GameObject:
   - component: {fileID: 5836772596905152453}
   - component: {fileID: 8782977436149416384}
   - component: {fileID: 3234705717609081584}
-  - component: {fileID: -4105255039508690102}
   - component: {fileID: 634723498943671728}
+  - component: {fileID: 2095105559307441280}
+  - component: {fileID: 7064551229467007350}
   m_Layer: 0
   m_Name: Arquera
   m_TagString: Arquera
@@ -1130,6 +1131,7 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 4469687699134223246}
+  - {fileID: 7026849390748011489}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &5836772596905152453
@@ -1182,20 +1184,6 @@ MonoBehaviour:
   SyncParent: 0
   _autoAOIOverride: 1
   DisableSharedModeInterpolation: 0
---- !u!114 &-4105255039508690102
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 4066155289438490717}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 1541381998, guid: e725a070cec140c4caffb81624c8c787, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  Guid:
-    RawGuidValue: 80666178df469f14688090ca83f65e16
 --- !u!195 &634723498943671728
 NavMeshAgent:
   m_ObjectHideFlags: 0
@@ -1205,10 +1193,10 @@ NavMeshAgent:
   m_GameObject: {fileID: 4066155289438490717}
   m_Enabled: 1
   m_AgentTypeID: 0
-  m_Radius: 0.5
+  m_Radius: 0.25
   m_Speed: 3.5
   m_Acceleration: 8
-  avoidancePriority: 50
+  avoidancePriority: 55
   m_AngularSpeed: 120
   m_StoppingDistance: 0
   m_AutoTraverseOffMeshLink: 1
@@ -1218,6 +1206,43 @@ NavMeshAgent:
   m_BaseOffset: 0
   m_WalkableMask: 4294967295
   m_ObstacleAvoidanceType: 4
+--- !u!114 &2095105559307441280
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4066155289438490717}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bc1ed1f4f97a6be4aa405c448df3780a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  unitName: Arquera
+  selectionIndicator: {fileID: 7185141883170368314}
+--- !u!136 &7064551229467007350
+CapsuleCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4066155289438490717}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 1
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 2
+  m_Radius: 0.25
+  m_Height: 1.8849559
+  m_Direction: 1
+  m_Center: {x: 0, y: 0.95, z: 0}
 --- !u!1 &4251297789687176746
 GameObject:
   m_ObjectHideFlags: 0
@@ -3371,3 +3396,74 @@ Transform:
   m_Children: []
   m_Father: {fileID: 9040068704592145834}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1001 &8114422316888447467
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 3621131294381929422}
+    m_Modifications:
+    - target: {fileID: 1231833799509660170, guid: 2df085483bb5e4e4ca0f7ec1a4a3fb36, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1231833799509660170, guid: 2df085483bb5e4e4ca0f7ec1a4a3fb36, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1231833799509660170, guid: 2df085483bb5e4e4ca0f7ec1a4a3fb36, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1231833799509660170, guid: 2df085483bb5e4e4ca0f7ec1a4a3fb36, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 1231833799509660170, guid: 2df085483bb5e4e4ca0f7ec1a4a3fb36, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: -0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1231833799509660170, guid: 2df085483bb5e4e4ca0f7ec1a4a3fb36, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: -0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1231833799509660170, guid: 2df085483bb5e4e4ca0f7ec1a4a3fb36, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: -0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1231833799509660170, guid: 2df085483bb5e4e4ca0f7ec1a4a3fb36, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1231833799509660170, guid: 2df085483bb5e4e4ca0f7ec1a4a3fb36, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1231833799509660170, guid: 2df085483bb5e4e4ca0f7ec1a4a3fb36, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1381189342185517777, guid: 2df085483bb5e4e4ca0f7ec1a4a3fb36, type: 3}
+      propertyPath: m_Name
+      value: SelectionIndicator
+      objectReference: {fileID: 0}
+    - target: {fileID: 1381189342185517777, guid: 2df085483bb5e4e4ca0f7ec1a4a3fb36, type: 3}
+      propertyPath: m_IsActive
+      value: 0
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: 2df085483bb5e4e4ca0f7ec1a4a3fb36, type: 3}
+--- !u!4 &7026849390748011489 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 1231833799509660170, guid: 2df085483bb5e4e4ca0f7ec1a4a3fb36, type: 3}
+  m_PrefabInstance: {fileID: 8114422316888447467}
+  m_PrefabAsset: {fileID: 0}
+--- !u!1 &7185141883170368314 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 1381189342185517777, guid: 2df085483bb5e4e4ca0f7ec1a4a3fb36, type: 3}
+  m_PrefabInstance: {fileID: 8114422316888447467}
+  m_PrefabAsset: {fileID: 0}
