@@ -75,17 +75,43 @@ public class RTSController : MonoBehaviour
             }
         }
         
-        // Click derecho (dar orden de movimiento)
+        // Click derecho: mover o atacar
         if (Input.GetMouseButtonDown(1))
         {
             if (_selectedUnit != null)
             {
                 Ray ray = _mainCamera.ScreenPointToRay(Input.mousePosition);
-                RaycastHit hit;
                 
-                if (Physics.Raycast(ray, out hit, 1000f, groundLayer))
+                // Hacer ambos raycast para decidir cuál usar
+                RaycastHit unitHit;
+                RaycastHit groundHit;
+                bool hitUnit = Physics.Raycast(ray, out unitHit, 1000f, unitLayer);
+                bool hitGround = Physics.Raycast(ray, out groundHit, 1000f, groundLayer);
+                
+                // Prioridad: Si clickeamos una unidad diferente, atacar
+                if (hitUnit)
                 {
-                    MoveSelectedUnitTo(hit.point);
+                    RTSUnit targetUnit = unitHit.collider.GetComponent<RTSUnit>();
+                    
+                    if (targetUnit != null && targetUnit != _selectedUnit)
+                    {
+                        // Atacar la unidad clickeada
+                        _selectedUnit.AttackTarget(targetUnit);
+                        Debug.Log($"[ATAQUE] {_selectedUnit.UnitName} ordenado atacar a {targetUnit.UnitName}");
+                        return; // Salir para no procesar el movimiento
+                    }
+                }
+                
+                // Si no clickeamos una unidad enemiga, mover al suelo
+                if (hitGround)
+                {
+                    Debug.Log($"[MOVIMIENTO] Clic en suelo detectado en {groundHit.point}");
+                    _selectedUnit.ClearTarget(); // Cancelar cualquier ataque en curso
+                    MoveSelectedUnitTo(groundHit.point);
+                }
+                else
+                {
+                    Debug.LogWarning($"[ERROR] Clic derecho no detectó ni unidad ni suelo. UnitLayer: {unitLayer.value}, GroundLayer: {groundLayer.value}");
                 }
             }
         }

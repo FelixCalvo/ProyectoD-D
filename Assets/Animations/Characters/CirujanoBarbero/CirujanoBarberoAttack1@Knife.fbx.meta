@@ -31,7 +31,7 @@ ModelImporter:
     extraUserProperties: []
     clipAnimations:
     - serializedVersion: 16
-      name: Knife
+      name: Attack1
       takeName: mixamo.com
       internalID: -203655887218126122
       firstFrame: 0
@@ -635,8 +635,7 @@ ModelImporter:
     - name: mixamorig:LeftHandIndex1
       parentName: mixamorig:LeftHand
       position: {x: 0.023419, y: 0.099097, z: -0.0029139998}
-      rotation: {x: -0.00000004312379, y: -0.000000043836117, z: 0.000000054638914,
-        w: 1}
+      rotation: {x: -0.00000004312379, y: -0.000000043836117, z: 0.000000054638914, w: 1}
       scale: {x: 1, y: 1, z: 1}
     - name: mixamorig:LeftHandIndex2
       parentName: mixamorig:LeftHandIndex1
@@ -646,8 +645,7 @@ ModelImporter:
     - name: mixamorig:LeftHandIndex3
       parentName: mixamorig:LeftHandIndex2
       position: {x: -0, y: 0.02543, z: 0}
-      rotation: {x: 0.0000000044369184, y: 0.0000000018562821, z: -0.000000041926807,
-        w: 1}
+      rotation: {x: 0.0000000044369184, y: 0.0000000018562821, z: -0.000000041926807, w: 1}
       scale: {x: 1, y: 1, z: 1}
     - name: mixamorig:LeftHandIndex4
       parentName: mixamorig:LeftHandIndex3
@@ -667,8 +665,7 @@ ModelImporter:
     - name: mixamorig:LeftHandMiddle3
       parentName: mixamorig:LeftHandMiddle2
       position: {x: -0, y: 0.029967, z: 0}
-      rotation: {x: -0.000000013485846, y: 0.000000001856308, z: -0.000000041927045,
-        w: 1}
+      rotation: {x: -0.000000013485846, y: 0.000000001856308, z: -0.000000041927045, w: 1}
       scale: {x: 1, y: 1, z: 1}
     - name: mixamorig:LeftHandMiddle4
       parentName: mixamorig:LeftHandMiddle3
@@ -678,8 +675,7 @@ ModelImporter:
     - name: mixamorig:LeftHandRing1
       parentName: mixamorig:LeftHand
       position: {x: -0.022417, y: 0.093084, z: -0.001435}
-      rotation: {x: -0.000000043123784, y: -0.00000004383612, z: 0.000000054638946,
-        w: 1}
+      rotation: {x: -0.000000043123784, y: -0.00000004383612, z: 0.000000054638946, w: 1}
       scale: {x: 1, y: 1, z: 1}
     - name: mixamorig:LeftHandRing2
       parentName: mixamorig:LeftHandRing1
@@ -709,8 +705,7 @@ ModelImporter:
     - name: mixamorig:LeftHandPinky3
       parentName: mixamorig:LeftHandPinky2
       position: {x: -0, y: 0.023352, z: 0}
-      rotation: {x: -0.0000000024947566, y: -0.000000025114865, z: -0.0000000042175734,
-        w: 1}
+      rotation: {x: -0.0000000024947566, y: -0.000000025114865, z: -0.0000000042175734, w: 1}
       scale: {x: 1, y: 1, z: 1}
     - name: mixamorig:LeftHandPinky4
       parentName: mixamorig:LeftHandPinky3
