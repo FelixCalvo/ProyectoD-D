@@ -14,82 +14,82 @@ public class RTSUnit : MonoBehaviour
     private Transform _visualModel;
     private CapsuleCollider _collider;
     private Vector3 _visualModelOriginalLocalPosition;
-    
+
     // ===== CONFIGURACIÓN =====
     [Header("Unit Info")]
     [SerializeField] private string unitName = "Unit";
-    
+
     [Header("Selection")]
     [SerializeField] private GameObject selectionIndicator;
-    
+
     [Header("Combat")]
-    [SerializeField] private float attackRange = 2.5f; // Debe ser > stoppingDistance (2.0f)
+    [SerializeField] private float attackRange = 2f; // Debe ser > stoppingDistance (2.0f)
     [SerializeField] private float attackCooldown = 3.5f; // Mayor que la animación más larga (2.117s) para evitar loops
     [SerializeField] private LayerMask enemyLayer;
-    
+
     // ===== ESTADO =====
     private bool _isSelected = false;
     private Vector3 _lastPosition;
     private float _lastAttackTime = -999f; // Inicializar en negativo para permitir primer ataque
     private RTSUnit _currentTarget = null;
     private float _attackAnimationDuration = 1f; // Duración de la animación Attack1
-    
+
     /// <summary>
     /// Nombre de la unidad (para UI)
     /// </summary>
     public string UnitName => unitName;
-    
+
     /// <summary>
     /// Si la unidad está seleccionada
     /// </summary>
     public bool IsSelected => _isSelected;
-    
+
     void Awake()
     {
         // Obtener componentes
         _agent = GetComponent<NavMeshAgent>();
         _collider = GetComponent<CapsuleCollider>();
         _animator = GetComponentInChildren<Animator>();
-        
+
         if (_animator != null)
         {
             _visualModel = _animator.transform;
             // Guardar posición local original del modelo visual
             _visualModelOriginalLocalPosition = _visualModel.localPosition;
-            
+
             // Obtener duración de la animación Attack1
             GetAttackAnimationDuration();
         }
-        
+
         // Configurar NavMeshAgent
         _agent.updateRotation = false; // Rotamos manualmente el modelo visual
         _agent.speed = 5f;
         _agent.obstacleAvoidanceType = ObstacleAvoidanceType.NoObstacleAvoidance; // Desactivar evasión dinámica
         _agent.radius = 0.3f; // Radio para pathfinding estático
         _agent.stoppingDistance = 0.1f; // Distancia mínima por defecto para movimientos precisos
-        
+
         // Configurar collider como trigger (no bloquea físicamente)
         if (_collider != null)
         {
             _collider.isTrigger = true;
         }
-        
+
         // Desactivar indicador por defecto
         if (selectionIndicator != null)
         {
             selectionIndicator.SetActive(false);
         }
-        
+
         _lastPosition = transform.position;
     }
-    
+
     void Update()
     {
         UpdateCombat(); // Primero combate (puede modificar movimiento)
         UpdateAnimation();
         UpdateRotation();
     }
-    
+
     /// <summary>
     /// Ordena a la unidad moverse a una posición
     /// </summary>
@@ -110,7 +110,7 @@ public class RTSUnit : MonoBehaviour
             }
         }
     }
-    
+
     /// <summary>
     /// Persigue un objetivo directamente sin verificar ocupación (para combate)
     /// </summary>
@@ -123,7 +123,7 @@ public class RTSUnit : MonoBehaviour
             _agent.SetDestination(targetPosition);
         }
     }
-    
+
     /// <summary>
     /// Verifica si una posición está ocupada por otra unidad
     /// </summary>
@@ -140,7 +140,7 @@ public class RTSUnit : MonoBehaviour
         }
         return false;
     }
-    
+
     /// <summary>
     /// Encuentra una posición libre cerca del destino original
     /// </summary>
@@ -152,41 +152,41 @@ public class RTSUnit : MonoBehaviour
             float rad = angle * Mathf.Deg2Rad;
             Vector3 offset = new Vector3(Mathf.Cos(rad), 0, Mathf.Sin(rad)) * 1.5f;
             Vector3 testPosition = targetPosition + offset;
-            
+
             if (!IsPositionOccupied(testPosition))
             {
                 return testPosition;
             }
         }
-        
+
         // Si no encuentra libre, devolver el original
         return targetPosition;
     }
-    
+
     /// <summary>
     /// Selecciona o deselecciona la unidad
     /// </summary>
     public void SetSelected(bool selected)
     {
         _isSelected = selected;
-        
+
         // Mostrar/ocultar indicador visual
         if (selectionIndicator != null)
         {
             selectionIndicator.SetActive(selected);
         }
     }
-    
+
     /// <summary>
     /// Actualiza la animación Walk según si se está moviendo
     /// </summary>
     private void UpdateAnimation()
     {
         if (_animator == null) return;
-        
+
         // Comprobar si estamos en tiempo de ataque
         bool isPlayingAttack = (Time.time < _lastAttackTime + _attackAnimationDuration);
-        
+
         // Solo actualizar Walk si NO estamos en animación de ataque
         if (!isPlayingAttack)
         {
@@ -200,14 +200,14 @@ public class RTSUnit : MonoBehaviour
             _animator.SetBool("Walk", false);
         }
     }
-    
+
     /// <summary>
     /// Rota el modelo visual hacia la dirección de movimiento
     /// </summary>
     private void UpdateRotation()
     {
         if (_visualModel == null) return;
-        
+
         // Si estamos atacando, rotar hacia el objetivo
         if (_currentTarget != null)
         {
@@ -224,11 +224,11 @@ public class RTSUnit : MonoBehaviour
             Vector3 direction = _agent.velocity.normalized;
             _visualModel.rotation = Quaternion.LookRotation(direction);
         }
-        
+
         // CRÍTICO: Resetear posición local para evitar deriva por pivot descentrado
         _visualModel.localPosition = _visualModelOriginalLocalPosition;
     }
-    
+
     /// <summary>
     /// Detiene el movimiento de la unidad
     /// </summary>
@@ -239,7 +239,7 @@ public class RTSUnit : MonoBehaviour
             _agent.ResetPath();
         }
     }
-    
+
     /// <summary>
     /// Verifica si la unidad está actualmente en movimiento
     /// </summary>
@@ -247,7 +247,7 @@ public class RTSUnit : MonoBehaviour
     {
         return _agent != null && _agent.velocity.magnitude > 0.1f;
     }
-    
+
     /// <summary>
     /// Sistema de combate - busca y ataca enemigos cercanos
     /// </summary>
@@ -257,16 +257,19 @@ public class RTSUnit : MonoBehaviour
         if (_currentTarget != null)
         {
             float distanceToTarget = Vector3.Distance(transform.position, _currentTarget.transform.position);
-            
+
             // Si el objetivo está en rango de ataque
             if (distanceToTarget <= attackRange)
             {
-                // Detener movimiento (NavMeshAgent debería haberlo hecho con stoppingDistance)
+                // Detener movimiento completamente para evitar patineo
                 if (_agent.hasPath)
                 {
                     _agent.ResetPath();
                 }
                 
+                // CRÍTICO: Forzar velocidad a cero para evitar inercia/patineo
+                _agent.velocity = Vector3.zero;
+
                 // Atacar solo si ha pasado el cooldown
                 if (Time.time >= _lastAttackTime + attackCooldown)
                 {
@@ -281,7 +284,7 @@ public class RTSUnit : MonoBehaviour
             }
         }
     }
-    
+
     /// <summary>
     /// Ejecuta un ataque (trigger de animación)
     /// </summary>
@@ -292,17 +295,17 @@ public class RTSUnit : MonoBehaviour
             _animator.SetTrigger("Attack1");
         }
     }
-    
+
     /// <summary>
     /// Obtiene la duración de la animación Attack1 del Animator
     /// </summary>
     private void GetAttackAnimationDuration()
     {
         if (_animator == null) return;
-        
+
         RuntimeAnimatorController ac = _animator.runtimeAnimatorController;
         if (ac == null) return;
-        
+
         // Buscar el clip de animación llamado "Attack1"
         foreach (AnimationClip clip in ac.animationClips)
         {
@@ -312,43 +315,43 @@ public class RTSUnit : MonoBehaviour
                 return;
             }
         }
-        
+
         // Si no se encuentra, usar valor por defecto
         _attackAnimationDuration = 1f;
     }
-    
+
     /// <summary>
     /// Ordena atacar a un objetivo específico
     /// </summary>
     public void AttackTarget(RTSUnit target)
     {
         if (target == null || target == this) return;
-        
+
         _currentTarget = target;
-        
+
         // Interrumpir animación de ataque anterior si estaba atacando otro objetivo
         if (_animator != null)
         {
             _animator.ResetTrigger("Attack1");
             _animator.Play("Idle", 0, 0f);
         }
-        
+
         // Resetear tiempo de ataque para permitir nuevo ataque inmediato
         _lastAttackTime = -999f;
-        
+
         // UpdateCombat() se encargará de perseguir y atacar automáticamente
     }
-    
+
     /// <summary>
     /// Cancela el objetivo actual y detiene cualquier persecución
     /// </summary>
     public void ClearTarget()
     {
         _currentTarget = null;
-        
+
         // Resetear tiempo de ataque para permitir animación Walk inmediatamente
         _lastAttackTime = -999f;
-        
+
         // Interrumpir animación de ataque forzando estado Idle
         if (_animator != null)
         {
@@ -356,12 +359,12 @@ public class RTSUnit : MonoBehaviour
             // Forzar transición inmediata a Idle, interrumpiendo Attack1
             _animator.Play("Idle", 0, 0f);
         }
-        
+
         // Restaurar stoppingDistance normal para movimientos precisos
         if (_agent != null)
         {
             _agent.stoppingDistance = 0.1f;
-            
+
             // Detener cualquier movimiento de persecución activo
             if (_agent.hasPath)
             {
@@ -369,7 +372,7 @@ public class RTSUnit : MonoBehaviour
             }
         }
     }
-    
+
     void OnDrawGizmosSelected()
     {
         // Dibujar el camino del NavMeshAgent en el editor
@@ -377,17 +380,17 @@ public class RTSUnit : MonoBehaviour
         {
             Gizmos.color = Color.green;
             Vector3[] corners = _agent.path.corners;
-            
+
             for (int i = 0; i < corners.Length - 1; i++)
             {
                 Gizmos.DrawLine(corners[i], corners[i + 1]);
             }
         }
-        
+
         // Dibujar rango de ataque
         Gizmos.color = Color.red;
         Gizmos.DrawWireSphere(transform.position, attackRange);
-        
+
         // Dibujar línea hacia el objetivo
         if (_currentTarget != null)
         {
