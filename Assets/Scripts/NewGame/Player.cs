@@ -137,6 +137,9 @@ public class Player : NetworkBehaviour
       _agent.enabled = true;
     }
     
+    // Log de configuración de combate
+    Debug.Log($"[{gameObject.name}] ⚔️ Configuración: hasRangedAttack={hasRangedAttack}, meleeRange={meleeAttackRange:F1}, rangedRange={rangedAttackRange:F1}");
+    
     // Asegurar que el Layer sea correcto
     int playerLayer = LayerMask.NameToLayer("Player");
     if (playerLayer == -1)
@@ -345,6 +348,7 @@ public class Player : NetworkBehaviour
     float distanceToTarget = Vector3.Distance(transform.position, _currentTarget.transform.position);
     
     // Decidir si usar ataque a distancia o cuerpo a cuerpo
+    bool wasUsingRanged = _isUsingRangedAttack;
     if (hasRangedAttack && distanceToTarget > meleeAttackRange)
     {
       _isUsingRangedAttack = true;
@@ -352,6 +356,12 @@ public class Player : NetworkBehaviour
     else
     {
       _isUsingRangedAttack = false;
+    }
+    
+    // Log cuando cambia el tipo de ataque
+    if (wasUsingRanged != _isUsingRangedAttack)
+    {
+      Debug.Log($"[{name}] Cambio de ataque: hasRangedAttack={hasRangedAttack}, distancia={distanceToTarget:F2}, meleeRange={meleeAttackRange:F2} → {(_isUsingRangedAttack ? "RANGED (Attack2)" : "MELEE (Attack1)")}");
     }
     
     // Si está en rango de ataque
@@ -410,6 +420,10 @@ public class Player : NetworkBehaviour
       attackTrigger = "Attack1"; // Ataque melee (cuerpo a cuerpo)
     }
     
+    // Log para diagnóstico
+    float distToTarget = _currentTarget != null ? Vector3.Distance(transform.position, _currentTarget.transform.position) : 0f;
+    Debug.Log($"[{name}] 🎯 Atacando: {attackTrigger} | hasRangedAttack={hasRangedAttack}, _isUsingRangedAttack={_isUsingRangedAttack}, distancia={distToTarget:F2}");
+    
     // Sincronizar trigger en la red
     CurrentAttackTrigger = attackTrigger;
     IsAttacking = true;
@@ -437,19 +451,16 @@ public class Player : NetworkBehaviour
     // Resetear triggers anteriores
     if (_animator != null)
     {
+      // Resetear ambos triggers (como en RTSUnit.cs)
       _animator.ResetTrigger("Attack1");
-      
-      // Solo resetear Attack2 si el personaje tiene ataque a distancia
-      if (hasRangedAttack)
-      {
-        _animator.ResetTrigger("Attack2");
-      }
-      
+      _animator.ResetTrigger("Attack2");
       _animator.Play("Idle", 0, 0f);
     }
     
-    // Permitir ataque inmediato
+    // Resetear tiempo de ataque para permitir nuevo ataque inmediato
     _lastAttackTime = -999f;
+    
+    // UpdateCombat() decidirá qué ataque usar según distancia
   }
 
   /// <summary>

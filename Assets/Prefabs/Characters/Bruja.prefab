@@ -2150,7 +2150,7 @@ MonoBehaviour:
   enemyLayer:
     serializedVersion: 2
     m_Bits: 0
-  hasRangedAttack: 0
+  hasRangedAttack: 1
 --- !u!114 &3044887138522598308
 MonoBehaviour:
   m_ObjectHideFlags: 0
