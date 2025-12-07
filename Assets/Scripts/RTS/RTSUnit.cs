@@ -23,16 +23,30 @@ public class RTSUnit : MonoBehaviour
     [SerializeField] private GameObject selectionIndicator;
 
     [Header("Combat")]
-    [SerializeField] private float attackRange = 2f; // Debe ser > stoppingDistance (2.0f)
+    [SerializeField] private float meleeAttackRange = 2.5f; // Rango de ataque cuerpo a cuerpo (Attack1)
+    [SerializeField] private float meleeStoppingDistance = 1.5f; // Distancia de parada para melee
+    [SerializeField] private float rangedAttackRange = 8f; // Rango de ataque a distancia (Attack2)
+    [SerializeField] private float rangedStoppingDistance = 5f; // Distancia de parada para ranged
     [SerializeField] private float attackCooldown = 3.5f; // Mayor que la animación más larga (2.117s) para evitar loops
     [SerializeField] private LayerMask enemyLayer;
+    
+    [Header("Attack Type")]
+    [SerializeField] private bool hasRangedAttack = false; // Si tiene Attack2 (arco, hechizos). Todos tienen Attack1 (melee)
 
     // ===== ESTADO =====
     private bool _isSelected = false;
     private Vector3 _lastPosition;
     private float _lastAttackTime = -999f; // Inicializar en negativo para permitir primer ataque
     private RTSUnit _currentTarget = null;
-    private float _attackAnimationDuration = 1f; // Duración de la animación Attack1
+    private float _meleeAnimationDuration = 1f; // Duración de Attack1
+    private float _rangedAnimationDuration = 1f; // Duración de Attack2
+    private bool _isUsingRangedAttack = false; // Qué ataque está usando actualmente
+    
+    // Propiedades calculadas según el ataque que se va a usar
+    private float CurrentAttackRange => _isUsingRangedAttack ? rangedAttackRange : meleeAttackRange;
+    private float CurrentStoppingDistance => _isUsingRangedAttack ? rangedStoppingDistance : meleeStoppingDistance;
+    private string CurrentAttackTrigger => _isUsingRangedAttack ? "Attack2" : "Attack1";
+    private float CurrentAttackDuration => _isUsingRangedAttack ? _rangedAnimationDuration : _meleeAnimationDuration;
 
     /// <summary>
     /// Nombre de la unidad (para UI)
@@ -56,12 +70,10 @@ public class RTSUnit : MonoBehaviour
             _visualModel = _animator.transform;
             // Guardar posición local original del modelo visual
             _visualModelOriginalLocalPosition = _visualModel.localPosition;
-
-            // Obtener duración de la animación Attack1
-            GetAttackAnimationDuration();
-        }
-
-        // Configurar NavMeshAgent
+            
+            // Obtener duración de ambas animaciones de ataque
+            GetAttackAnimationDurations();
+        }        // Configurar NavMeshAgent
         _agent.updateRotation = false; // Rotamos manualmente el modelo visual
         _agent.speed = 5f;
         _agent.obstacleAvoidanceType = ObstacleAvoidanceType.NoObstacleAvoidance; // Desactivar evasión dinámica
@@ -118,8 +130,8 @@ public class RTSUnit : MonoBehaviour
     {
         if (_agent != null && _agent.isOnNavMesh)
         {
-            // Ajustar stoppingDistance para mantener distancia de ataque
-            _agent.stoppingDistance = 1.5f;
+            // Ajustar stoppingDistance según tipo de ataque
+            _agent.stoppingDistance = CurrentStoppingDistance;
             _agent.SetDestination(targetPosition);
         }
     }
@@ -184,8 +196,8 @@ public class RTSUnit : MonoBehaviour
     {
         if (_animator == null) return;
 
-        // Comprobar si estamos en tiempo de ataque
-        bool isPlayingAttack = (Time.time < _lastAttackTime + _attackAnimationDuration);
+        // Comprobar si estamos en tiempo de ataque (usar duración del ataque actual)
+        bool isPlayingAttack = (Time.time < _lastAttackTime + CurrentAttackDuration);
 
         // Solo actualizar Walk si NO estamos en animación de ataque
         if (!isPlayingAttack)
@@ -258,8 +270,20 @@ public class RTSUnit : MonoBehaviour
         {
             float distanceToTarget = Vector3.Distance(transform.position, _currentTarget.transform.position);
 
-            // Si el objetivo está en rango de ataque
-            if (distanceToTarget <= attackRange)
+            // DECISIÓN: ¿Qué ataque usar según la distancia?
+            if (hasRangedAttack && distanceToTarget > meleeAttackRange)
+            {
+                // Está lejos y tiene Attack2 → Usar ataque a distancia
+                _isUsingRangedAttack = true;
+            }
+            else
+            {
+                // Está cerca O no tiene Attack2 → Usar ataque melee (Attack1)
+                _isUsingRangedAttack = false;
+            }
+
+            // Si el objetivo está en rango de ataque (del tipo de ataque elegido)
+            if (distanceToTarget <= CurrentAttackRange)
             {
                 // Detener movimiento completamente para evitar patineo
                 if (_agent.hasPath)
@@ -286,38 +310,49 @@ public class RTSUnit : MonoBehaviour
     }
 
     /// <summary>
-    /// Ejecuta un ataque (trigger de animación)
+    /// Ejecuta un ataque (trigger de animación según tipo de personaje)
     /// </summary>
     public void Attack()
     {
         if (_animator != null)
         {
-            _animator.SetTrigger("Attack1");
+            // Usar Attack1 (melee) o Attack2 (ranged) según configuración
+            _animator.SetTrigger(CurrentAttackTrigger);
         }
     }
 
     /// <summary>
-    /// Obtiene la duración de la animación Attack1 del Animator
+    /// Obtiene la duración de ambas animaciones de ataque (Attack1 y Attack2 si existe)
     /// </summary>
-    private void GetAttackAnimationDuration()
+    private void GetAttackAnimationDurations()
     {
         if (_animator == null) return;
 
         RuntimeAnimatorController ac = _animator.runtimeAnimatorController;
         if (ac == null) return;
 
-        // Buscar el clip de animación llamado "Attack1"
+        // Buscar Attack1 (melee - todos lo tienen)
         foreach (AnimationClip clip in ac.animationClips)
         {
             if (clip.name.Contains("Attack1") || clip.name.Contains("attack1"))
             {
-                _attackAnimationDuration = clip.length;
-                return;
+                _meleeAnimationDuration = clip.length;
+                break;
             }
         }
 
-        // Si no se encuentra, usar valor por defecto
-        _attackAnimationDuration = 1f;
+        // Buscar Attack2 (ranged - solo algunos lo tienen)
+        if (hasRangedAttack)
+        {
+            foreach (AnimationClip clip in ac.animationClips)
+            {
+                if (clip.name.Contains("Attack2") || clip.name.Contains("attack2"))
+                {
+                    _rangedAnimationDuration = clip.length;
+                    break;
+                }
+            }
+        }
     }
 
     /// <summary>
@@ -329,17 +364,19 @@ public class RTSUnit : MonoBehaviour
 
         _currentTarget = target;
 
-        // Interrumpir animación de ataque anterior si estaba atacando otro objetivo
+        // Interrumpir cualquier animación de ataque anterior
         if (_animator != null)
         {
+            // Resetear ambos triggers por si acaso
             _animator.ResetTrigger("Attack1");
+            _animator.ResetTrigger("Attack2");
             _animator.Play("Idle", 0, 0f);
         }
 
         // Resetear tiempo de ataque para permitir nuevo ataque inmediato
         _lastAttackTime = -999f;
 
-        // UpdateCombat() se encargará de perseguir y atacar automáticamente
+        // UpdateCombat() decidirá qué ataque usar según distancia
     }
 
     /// <summary>
@@ -355,8 +392,10 @@ public class RTSUnit : MonoBehaviour
         // Interrumpir animación de ataque forzando estado Idle
         if (_animator != null)
         {
+            // Resetear ambos triggers por si acaso
             _animator.ResetTrigger("Attack1");
-            // Forzar transición inmediata a Idle, interrumpiendo Attack1
+            _animator.ResetTrigger("Attack2");
+            // Forzar transición inmediata a Idle, interrumpiendo ataque
             _animator.Play("Idle", 0, 0f);
         }
 
@@ -387,9 +426,13 @@ public class RTSUnit : MonoBehaviour
             }
         }
 
-        // Dibujar rango de ataque
+        // Dibujar rango de ataque (rojo para el rango activo)
         Gizmos.color = Color.red;
-        Gizmos.DrawWireSphere(transform.position, attackRange);
+        Gizmos.DrawWireSphere(transform.position, CurrentAttackRange);
+        
+        // Dibujar círculo de stopping distance (amarillo)
+        Gizmos.color = Color.yellow;
+        Gizmos.DrawWireSphere(transform.position, CurrentStoppingDistance);
 
         // Dibujar línea hacia el objetivo
         if (_currentTarget != null)
