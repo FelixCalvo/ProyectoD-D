@@ -2601,7 +2601,7 @@ GameObject:
   - component: {fileID: 1269313552}
   - component: {fileID: 1269313551}
   m_Layer: 5
-  m_Name: Button_NewGame
+  m_Name: Button_SinglePlayer
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0

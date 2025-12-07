@@ -26,8 +26,8 @@ public class BasicSpawner : MonoBehaviour, INetworkRunnerCallbacks
     //public void OnInput(NetworkRunner runner, NetworkInput input) { }
     public void OnInputMissing(NetworkRunner runner, PlayerRef player, NetworkInput input) { }
     public void OnShutdown(NetworkRunner runner, ShutdownReason shutdownReason) { }
-    public void OnConnectedToServer(NetworkRunner runner) { }
-    public void OnDisconnectedFromServer(NetworkRunner runner, NetDisconnectReason reason) { }
+    void INetworkRunnerCallbacks.OnConnectedToServer(NetworkRunner runner) { }
+    void INetworkRunnerCallbacks.OnDisconnectedFromServer(NetworkRunner runner, NetDisconnectReason reason) { }
     public void OnConnectRequest(NetworkRunner runner, NetworkRunnerCallbackArgs.ConnectRequest request, byte[] token) { }
     public void OnConnectFailed(NetworkRunner runner, NetAddress remoteAddress, NetConnectFailedReason reason) { }
     public void OnUserSimulationMessage(NetworkRunner runner, SimulationMessagePtr message) { }
@@ -44,9 +44,19 @@ public class BasicSpawner : MonoBehaviour, INetworkRunnerCallbacks
 
     private NetworkRunner _runner;
     private List<SessionInfo> _sessions = new List<SessionInfo>();
+    
+    // CRÍTICO: Buffer para almacenar clicks capturados en Update()
+    private bool _hasPendingClick = false;
+    private bool _isPendingAttack = false;
+    private Vector3 _pendingTargetPosition = Vector3.zero;
+    private int _pendingTargetPlayerId = -1;
 
     async void Start()
     {
+        // CRÍTICO: Asegurar que el cursor está activo en Build
+        Cursor.visible = true;
+        Cursor.lockState = CursorLockMode.None;
+        
         // Verificar si ya existe un NetworkRunner activo (creado desde NetworkSessionStarter)
         NetworkRunner existingRunner = NetworkSessionStarter.GetRunner();
         
@@ -103,6 +113,56 @@ public class BasicSpawner : MonoBehaviour, INetworkRunnerCallbacks
         else if (tipoPartida == "Client" && !string.IsNullOrEmpty(nombrePartida))
         {
             StartGame(GameMode.Client, nombrePartida);
+        }
+    }
+    
+    /// <summary>
+    /// Update se ejecuta CADA FRAME para capturar TODOS los clicks del ratón.
+    /// Esto evita perder clicks entre los ticks de Fusion.
+    /// </summary>
+    void Update()
+    {
+        // Solo capturar input si hay un runner activo
+        if (_runner == null || !_runner.IsRunning)
+            return;
+        
+        // Capturar clicks del ratón (solo si no hay un click pendiente)
+        if (Input.GetMouseButtonDown(1) && !_hasPendingClick)
+        {
+            Debug.Log($"[Input] 🖱️ CLIC DERECHO capturado en Update() (Frame {Time.frameCount})");
+            
+            Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
+            
+            // Intentar detectar jugador enemigo
+            if (Physics.Raycast(ray, out RaycastHit hitPlayer, 1000f, LayerMask.GetMask("Player")))
+            {
+                Player targetPlayer = hitPlayer.collider.GetComponent<Player>();
+                if (targetPlayer != null && targetPlayer.Object != null)
+                {
+                    _hasPendingClick = true;
+                    _isPendingAttack = true;
+                    _pendingTargetPlayerId = (int)targetPlayer.Object.Id.Raw;
+                    Debug.Log($"[Input] ✓ Ataque almacenado → {hitPlayer.collider.name}");
+                }
+            }
+            // Si no hay jugador, intentar detectar suelo
+            else if (Physics.Raycast(ray, out RaycastHit hitGround, 1000f, LayerMask.GetMask("Ground")))
+            {
+                _hasPendingClick = true;
+                _isPendingAttack = false;
+                _pendingTargetPosition = hitGround.point;
+                Debug.Log($"[Input] ✓ Movimiento almacenado → {hitGround.point}");
+            }
+            else
+            {
+                Debug.LogError($"[Input] ❌ CLIC NO DETECTÓ NADA - Verifica layers!");
+                
+                // Diagnóstico: Raycast SIN layer mask
+                if (Physics.Raycast(ray, out RaycastHit hitAny, 1000f))
+                {
+                    Debug.LogError($"[Input] ❌ Terrain en layer INCORRECTO: '{hitAny.collider.name}' (Layer: '{LayerMask.LayerToName(hitAny.collider.gameObject.layer)}')");
+                }
+            }
         }
     }
 
@@ -383,17 +443,31 @@ public class BasicSpawner : MonoBehaviour, INetworkRunnerCallbacks
     {
         var data = new NetworkInputData();
 
-        if (Input.GetKey(KeyCode.W))
-            data.direction += Vector3.forward;
-
-        if (Input.GetKey(KeyCode.S))
-            data.direction += Vector3.back;
-
-        if (Input.GetKey(KeyCode.A))
-            data.direction += Vector3.left;
-
-        if (Input.GetKey(KeyCode.D))
-            data.direction += Vector3.right;
+        // CRÍTICO: Procesar clicks almacenados en Update()
+        // Esto garantiza que NO se pierdan clicks entre ticks de Fusion
+        if (_hasPendingClick)
+        {
+            Debug.Log($"[Input] ⚡ Procesando click almacenado en OnInput() (Frame {Time.frameCount})");
+            
+            if (_isPendingAttack)
+            {
+                data.attackCommand = true;
+                data.targetPlayerId = _pendingTargetPlayerId;
+                Debug.Log($"[Input] ✓✓ Enviando ATAQUE a jugador ID: {_pendingTargetPlayerId}");
+            }
+            else
+            {
+                data.moveCommand = true;
+                data.targetPosition = _pendingTargetPosition;
+                Debug.Log($"[Input] ✓✓ Enviando MOVIMIENTO a {_pendingTargetPosition}");
+            }
+            
+            // Limpiar buffer
+            _hasPendingClick = false;
+            _isPendingAttack = false;
+            _pendingTargetPosition = Vector3.zero;
+            _pendingTargetPlayerId = -1;
+        }
 
         input.Set(data);
     }

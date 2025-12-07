@@ -53,7 +53,7 @@ public class MainMenuController : MonoBehaviour
         StartCoroutine(FadeInRoutine());
 
         if (buttonNewGame != null)
-            buttonNewGame.onClick.AddListener(() => StartCoroutine(LoadSceneWithFade("NewGame")));
+            buttonNewGame.onClick.AddListener(() => StartCoroutine(LoadSceneWithFade("SinglePlayer")));
 
         if (buttonCreditos != null)
             buttonCreditos.onClick.AddListener(() => StartCoroutine(LoadSceneWithFade("Creditos")));

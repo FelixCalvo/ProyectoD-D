@@ -1,8 +1,134 @@
 # 📋 Changelog del Proyecto
 
+## [v1.2.0] - 5 de Diciembre de 2025
+
+### ✨ Sistema Multiplayer RTS con Photon Fusion
+
+**Integración completa del sistema de combate RTS en modo multiplayer**
+
+---
+
+## 🌐 Sistema Multiplayer
+
+### Migración del Sistema RTS a Multiplayer
+**Fecha**: 5 Diciembre 2025
+
+**Características**:
+- Sistema de combate dual (Attack1/Attack2) sincronizado en red
+- NavMeshAgent con pathfinding en multiplayer
+- Clic derecho para atacar/mover sincronizado
+- Variables `[Networked]` para sincronización de estado
+- Soporte para 4 personajes: Paladin, Cirujano, Arquera, Bruja
+- Ataque inteligente (melee/ranged según distancia)
+- Animaciones sincronizadas entre clientes
+
+**Archivos Modificados**:
+```
+Assets/Scripts/NewGame/Player.cs              [330+ líneas nuevas]
+Assets/Scripts/NewGame/NetworkInputData.cs    [Expandido]
+Assets/Scripts/NewGame/BasicSpawner.cs        [Input de ratón]
+```
+
+**Implementación de Red**:
+```csharp
+// Variables de red sincronizadas
+[Networked] private NetworkBool IsWalking { get; set; }
+[Networked] private NetworkBool IsAttacking { get; set; }
+[Networked] private NetworkString<_16> CurrentAttackTrigger { get; set; }
+[Networked] private int TargetNetworkId { get; set; }
+
+// Sincronización de animaciones en Render()
+public override void Render()
+{
+    if (!string.IsNullOrEmpty(CurrentAttackTrigger.Value))
+    {
+        _animator.SetTrigger(CurrentAttackTrigger.Value.ToString());
+    }
+}
+```
+
+**Sistema de Input en Red**:
+```csharp
+// NetworkInputData expandido
+public struct NetworkInputData : INetworkInput
+{
+    public Vector3 direction;           // WASD
+    public NetworkBool attackCommand;   // Clic derecho en enemigo
+    public NetworkBool moveCommand;     // Clic derecho en suelo
+    public Vector3 targetPosition;      // Posición objetivo
+    public int targetPlayerId;          // ID del jugador enemigo
+}
+
+// Captura de input en BasicSpawner.OnInput()
+if (Input.GetMouseButtonDown(1)) // Clic derecho
+{
+    // Detectar enemigo
+    if (Physics.Raycast(ray, out hit, 1000f, LayerMask.GetMask("Player")))
+    {
+        data.attackCommand = true;
+        data.targetPlayerId = targetPlayer.Object.Id.Raw;
+    }
+    // Detectar suelo
+    else if (Physics.Raycast(ray, out hit, 1000f, LayerMask.GetMask("Ground")))
+    {
+        data.moveCommand = true;
+        data.targetPosition = hit.point;
+    }
+}
+```
+
+**Configuración Requerida**:
+1. **NavMesh Baking**: NavMeshSurface en escena Multiplayer
+2. **Layers**: `Player` (personajes), `Ground` (suelo)
+3. **NavMeshAgent**: Speed 5, Radius 0.3, Stopping Distance 0.1
+4. **Player.cs**: Configurar attack ranges, cooldown, hasRangedAttack
+5. **Animator Controller**: Walk (bool), Attack1 (trigger), Attack2 (trigger)
+
+**Parámetros Multiplayer**:
+- `moveSpeed = 5f`
+- `meleeAttackRange = 2.5f`
+- `meleeStoppingDistance = 1.5f`
+- `rangedAttackRange = 8f`
+- `rangedStoppingDistance = 5f`
+- `attackCooldown = 3.5f`
+
+**Flujo de Combate Multiplayer**:
+1. Cliente 1: Clic derecho en personaje enemigo
+2. BasicSpawner captura input → `NetworkInputData.attackCommand = true`
+3. Player.FixedUpdateNetwork() → `AttackTarget(targetPlayer)`
+4. Player.UpdateCombat() → Decide melee/ranged
+5. Player.Attack() → Sincroniza `CurrentAttackTrigger` en red
+6. Player.Render() (todos los clientes) → Activa animación Attack1/Attack2
+7. NetworkTransform sincroniza posición del NavMeshAgent
+
+**Diferencias Singleplayer vs Multiplayer**:
+| Aspecto | Singleplayer (RTSUnit.cs) | Multiplayer (Player.cs) |
+|---------|---------------------------|-------------------------|
+| Input | RTSController (directo) | BasicSpawner (NetworkInputData) |
+| Target | RTSUnit reference | Player + NetworkId |
+| Sync | No necesaria | `[Networked]` variables |
+| Position | Transform directo | NetworkTransform |
+| Rotation | Transform.rotation | VisualModel.rotation (hijo) |
+
+**Tests de Validación**:
+- ✓ Movimiento con NavMesh sincronizado
+- ✓ Ataque melee (Paladin/Cirujano)
+- ✓ Ataque ranged (Arquera/Bruja)
+- ✓ Cambio automático melee ↔ ranged
+- ✓ Animaciones sincronizadas entre clientes
+- ✓ Interrupción de ataque con movimiento
+
+**Documentación**:
+- `MULTIPLAYER_SETUP.md`: Guía completa de configuración
+- Debugging de sincronización de red
+- Comparación singleplayer/multiplayer
+- Tests paso a paso
+
+---
+
 ## [v1.1.0] - 5 de Diciembre de 2025
 
-### ✨ Sistema de Combate RTS
+### ✨ Sistema de Combate RTS (Singleplayer)
 
 **Implementación completa del sistema de combate para modo RTS en Testing**
 
