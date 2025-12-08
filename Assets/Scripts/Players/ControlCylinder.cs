@@ -553,8 +553,8 @@ public class ControlCylinder : NetworkBehaviour
         int jugadoresConectados = Runner.ActivePlayers.Count();
         int personajesSeleccionadosCount = this.personajesSeleccionados.Count;
         
-        // Cambio: solo activar cuando hay exactamente 2 jugadores seleccionados
-        bool todosSeleccionaron = personajesSeleccionadosCount == 2;
+        // Activar cuando hay el mínimo de jugadores requeridos seleccionados
+        bool todosSeleccionaron = personajesSeleccionadosCount >= HelperClass.MIN_PLAYERS_TO_START;
         
         // Activar/desactivar interacción del botón
         botonIniciarPartida.interactable = todosSeleccionaron;
@@ -585,7 +585,7 @@ public class ControlCylinder : NetworkBehaviour
             }
             else
             {
-                textoBotonIniciar.text = $"Esperando jugadores ({personajesSeleccionadosCount}/2)";
+                textoBotonIniciar.text = $"Esperando jugadores ({personajesSeleccionadosCount}/{HelperClass.MAX_PLAYERS})";
                 textoBotonIniciar.color = Color.white;
             }
         }
@@ -604,9 +604,9 @@ public class ControlCylinder : NetworkBehaviour
         
         int seleccionados = personajesSeleccionados.Count;
         
-        if (seleccionados < 2)
+        if (seleccionados < HelperClass.MIN_PLAYERS_TO_START)
         {
-            MostrarMensaje($"⚠ Faltan jugadores por seleccionar ({seleccionados}/2)", false);
+            MostrarMensaje($"⚠ Faltan jugadores por seleccionar ({seleccionados}/{HelperClass.MIN_PLAYERS_TO_START})", false);
             return;
         }
         

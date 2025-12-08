@@ -65,6 +65,16 @@ public class RTSUnit : MonoBehaviour
         _collider = GetComponent<CapsuleCollider>();
         _animator = GetComponentInChildren<Animator>();
 
+        if (_agent == null)
+        {
+            Debug.LogError($"[{gameObject.name}] ❌ No se encontró NavMeshAgent! Agrega el componente al prefab.");
+            return;
+        }
+        
+        // CRÍTICO: Deshabilitar temporalmente para evitar error "Failed to create agent"
+        // Se habilitará en Start() después de corregir posición
+        _agent.enabled = false;
+
         if (_animator != null)
         {
             _visualModel = _animator.transform;
@@ -73,7 +83,9 @@ public class RTSUnit : MonoBehaviour
             
             // Obtener duración de ambas animaciones de ataque
             GetAttackAnimationDurations();
-        }        // Configurar NavMeshAgent
+        }
+        
+        // Configurar NavMeshAgent (mientras está deshabilitado)
         _agent.updateRotation = false; // Rotamos manualmente el modelo visual
         _agent.speed = 5f;
         _agent.obstacleAvoidanceType = ObstacleAvoidanceType.NoObstacleAvoidance; // Desactivar evasión dinámica
@@ -94,6 +106,33 @@ public class RTSUnit : MonoBehaviour
 
         _lastPosition = transform.position;
     }
+    
+    void Start()
+    {
+        // CRÍTICO: Asegurar que el NavMeshAgent esté sobre el NavMesh
+        if (_agent != null)
+        {
+            // Buscar el punto más cercano del NavMesh (radio ampliado a 50f para mayor tolerancia)
+            NavMeshHit hit;
+            if (NavMesh.SamplePosition(transform.position, out hit, 50f, NavMesh.AllAreas))
+            {
+                // Mover al punto más cercano del NavMesh si es necesario
+                if (Vector3.Distance(transform.position, hit.position) > 0.1f)
+                {
+                    transform.position = hit.position;
+                    Debug.Log($"[{gameObject.name}] ✅ Reposicionado sobre NavMesh: {hit.position}");
+                }
+            }
+            else
+            {
+                Debug.LogError($"[{gameObject.name}] ❌ NO se encontró NavMesh en radio de 50f desde {transform.position}! Bake NavMesh en Window → AI → Navigation");
+            }
+            
+            // Habilitar NavMeshAgent ahora que la posición es correcta
+            _agent.enabled = true;
+            Debug.Log($"[{gameObject.name}] ✅ NavMeshAgent habilitado. isOnNavMesh={_agent.isOnNavMesh}");
+        }
+    }
 
     void Update()
     {
@@ -107,19 +146,36 @@ public class RTSUnit : MonoBehaviour
     /// </summary>
     public void MoveTo(Vector3 destination)
     {
-        if (_agent != null && _agent.isOnNavMesh)
+        if (_agent == null)
         {
-            // Verificar si el destino está ocupado por otra unidad
-            if (!IsPositionOccupied(destination))
-            {
-                _agent.SetDestination(destination);
-            }
-            else
-            {
-                // Buscar posición libre cercana
-                Vector3 freePosition = FindNearbyFreePosition(destination);
-                _agent.SetDestination(freePosition);
-            }
+            Debug.LogError($"[{gameObject.name}] ❌ NavMeshAgent es null en MoveTo");
+            return;
+        }
+        
+        if (!_agent.isOnNavMesh)
+        {
+            Debug.LogError($"[{gameObject.name}] ❌ NavMeshAgent NO está en NavMesh. Posición: {transform.position}");
+            return;
+        }
+        
+        if (!_agent.enabled)
+        {
+            Debug.LogWarning($"[{gameObject.name}] NavMeshAgent está deshabilitado, habilitándolo...");
+            _agent.enabled = true;
+        }
+        
+        // Verificar si el destino está ocupado por otra unidad
+        if (!IsPositionOccupied(destination))
+        {
+            _agent.SetDestination(destination);
+            Debug.Log($"[{gameObject.name}] 🎯 Moviendo a {destination}");
+        }
+        else
+        {
+            // Buscar posición libre cercana
+            Vector3 freePosition = FindNearbyFreePosition(destination);
+            _agent.SetDestination(freePosition);
+            Debug.Log($"[{gameObject.name}] 🎯 Posición ocupada, moviendo a posición alternativa {freePosition}");
         }
     }
 

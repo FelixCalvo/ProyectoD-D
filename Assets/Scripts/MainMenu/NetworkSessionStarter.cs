@@ -79,7 +79,7 @@ public static class NetworkSessionStarter
             SessionName = nombrePartida,
             Scene = playersSceneRef, // Cargar directamente la escena Players
             SceneManager = sceneManager,
-            PlayerCount = 2,
+            PlayerCount = HelperClass.MAX_PLAYERS,
             IsVisible = true,
             IsOpen = true
         });

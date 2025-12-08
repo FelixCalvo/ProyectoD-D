@@ -214,7 +214,7 @@ public class BasicSpawner : MonoBehaviour, INetworkRunnerCallbacks
             SessionName = sessionName,
             Scene = scene,
             SceneManager = sceneManager,
-            PlayerCount = 4,  // Máximo de jugadores (cambia este valor según necesites: 2, 4, 6, 8, etc.)
+            PlayerCount = HelperClass.MAX_PLAYERS,
             IsVisible = true,
             IsOpen = true,
             SessionProperties = new Dictionary<string, SessionProperty>()
