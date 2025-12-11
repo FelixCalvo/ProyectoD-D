@@ -8,6 +8,13 @@ TagManager:
   - Bruja
   - Cirujano Barbero
   - Paladin
+  - Laser
+  - Enemy
+  - Archivero
+  - Guardian
+  - Cocinero
+  - Sirvienta
+  - Cura
   layers:
   - Default
   - TransparentFX

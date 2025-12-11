@@ -15,4 +15,4 @@ public static class HelperClass
     public const int MIN_PLAYERS_TO_START = 4;
 }
 
-// Fin de HelperClass.cs
+// Fin de HelperClass.cs   

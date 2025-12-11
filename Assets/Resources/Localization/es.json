@@ -1,0 +1,26 @@
+{
+  
+"baron1": "Héroes de paso, os he llamado porque mi heraldo, Ser Aldric de Velhast, yace muerto sin herida aparente.",
+    "Baron2": "Si la verdad no se presenta antes del amanecer, la tregua se romperá y la frontera arderá.",
+    "Baron3": "Necesito ojos neutrales. Vosotros no respondéis a mis enemigos ni a mis vasallos.",
+    "Menu_WhyUs": "¿Por qué nosotros? (contexto)",
+    "Menu_Stakes": "¿Qué está en juego si fallamos?",
+    "Menu_Reward": "Hablemos de la recompensa.",
+    "Menu_Accept": "Aceptamos la investigación.",
+    "Menu_Hold": "Aún no. Necesitamos un momento.",
+    "Baron4_WhyUs": "Mis capitanes ven enemigos en cada sombra y mis clérigos ven culpa en cada respiro.",
+    "Baron5_WhyUs": "Vosotros estáis fuera de la disputa: paladín, brujo, cirujano, arquera... neutrales ante mis casas y las del reino vecino.",
+    "Baron6_WhyUs": "Necesito una verdad que no pueda ser tachada de instrumento político.",
+    "Baron7_Stakes": "Si no resolvéis esto antes de que el sol asome, los señores fronterizos exigirán sangre.",
+    "Baron8_Stakes": "La firma de paz caerá; caravanas y aldeas pagarán por una muerte sin razón.",
+    "Baron9_Stakes": "Y si acusáis sin pruebas, el reloj se acercará al alba. No repetiré ese error.",
+    "Baron10_Reward": "Si traéis una verdad sólida y presentable:",
+    "Baron11_Reward": "— Oro: {RewardGold} coronas; — Prestigio: rango {RewardReputation} en mi corte; — Salvoconducto firmado para viajar en mis dominios.",
+    "Baron12_Reward": "Si evitáis la guerra, añadiré abastecimiento para vuestra compañía y un cuarterón de provisiones en las postas.",
+    "Liora1_Accept": "Aceptamos. Serviremos a la verdad.",
+    "Baron13_Accept": "Bien. La noche comienza ahora: Noche cerrada.",
+    "Baron14_Accept": "Podéis moveros por el castillo. Traed pruebas, no rumores.",
+    "Torval1_Hold": "Un momento, mi señor. Necesitamos ordenar preguntas.",
+    "Baron15_Hold": "No tardéis; la noche no espera."
+
+}

@@ -807,6 +807,7 @@ GameObject:
   m_Component:
   - component: {fileID: 2554999146218270233}
   - component: {fileID: 2952901526054921471}
+  - component: {fileID: 7753427168881911542}
   m_Layer: 0
   m_Name: Guardian
   m_TagString: Untagged
@@ -823,7 +824,7 @@ Transform:
   m_GameObject: {fileID: 4893891534490296474}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: 1, z: -0, w: 0.0000025928018}
-  m_LocalPosition: {x: 0.50909805, y: -1.2847558, z: -0.83852196}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -853,6 +854,29 @@ Animator:
   m_AllowConstantClipSamplingOptimization: 1
   m_KeepAnimatorStateOnDisable: 0
   m_WriteDefaultValuesOnDisable: 0
+--- !u!136 &7753427168881911542
+CapsuleCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4893891534490296474}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 2
+  m_Radius: 0.5
+  m_Height: 2
+  m_Direction: 1
+  m_Center: {x: -0.00000020861626, y: 1.06, z: 0}
 --- !u!1 &5208746422278891817
 GameObject:
   m_ObjectHideFlags: 0
@@ -960,7 +984,7 @@ GameObject:
   - component: {fileID: 2286088112405127537}
   m_Layer: 0
   m_Name: Guardian
-  m_TagString: Untagged
+  m_TagString: Guardian
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0

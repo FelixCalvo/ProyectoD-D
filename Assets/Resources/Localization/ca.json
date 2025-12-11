@@ -1,0 +1,9 @@
+{
+  "WELCOME_MESSAGE": "Benvingut al joc!",
+  "START_QUEST": "La teva aventura comença aquí...",
+  "NPC_GREETING": "Hola, aventurer. En què et puc ajudar?",
+  "QUEST_COMPLETE": "Has completat la missió!",
+  "GAME_OVER": "Fi del joc",
+  "CONTINUE": "Continuar",
+  "EXIT": "Sortir"
+}

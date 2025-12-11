@@ -1,0 +1,25 @@
+{ 
+    "baron1": "Travelers, I summoned you because my herald, Ser Aldric of Velhast, lies dead with no apparent wound.",
+    "Baron2": "If the truth is not presented before dawn, the truce will break and the border will burn.",
+    "Baron3": "I need neutral eyes. You answer neither to my enemies nor to my vassals.",
+    "Menu_WhyUs": "Why us? (context)",
+    "Menu_Stakes": "What’s at stake if we fail?",
+    "Menu_Reward": "Let’s discuss the reward.",
+    "Menu_Accept": "We accept the investigation.",
+    "Menu_Hold": "Not yet. We need a moment.",
+    "Baron4_WhyUs": "My captains see enemies in every shadow; my clerics see guilt in every breath.",
+    "Baron5_WhyUs": "You stand outside the dispute: paladin, witch, barber-surgeon, archer… neutral to my houses and the neighboring realm.",
+    "Baron6_WhyUs": "I need a truth that cannot be dismissed as a political tool.",
+    "Baron7_Stakes": "If you do not resolve this before sunrise, the border lords will demand blood.",
+    "Baron8_Stakes": "The peace signing will fall; caravans and villages will pay for a death without reason.",
+    "Baron9_Stakes": "And if you accuse without proof, the clock will hasten toward dawn. I won’t make that mistake again.",
+    "Baron10_Reward": "If you bring a solid, presentable truth:",
+    "Baron11_Reward": "— Gold: {RewardGold} crowns; — Prestige: rank {RewardReputation} at my court; — A signed safe-conduct to travel my lands.",
+    "Baron12_Reward": "If you avert war, I’ll add supplies for your company and a quarter-load of provisions at the posts.",
+    "Liora1_Accept": "We accept. We will serve the truth.",
+    "Baron13_Accept": "Good. The night begins now: Deep Night.",
+    "Baron14_Accept": "You may move through the castle. Bring evidence, not rumors.",
+    "Torval1_Hold": "A moment, my lord. We must order our questions.",
+    "Baron15_Hold": "Do not delay; the night won’t wait."
+
+}
