@@ -1,4 +1,5 @@
 using UnityEngine;
+using Fungus;   
 
 public class Archivero : MonoBehaviour
 {
@@ -17,5 +18,11 @@ public class Archivero : MonoBehaviour
     private void OnMouseDown()
     {
         print("Hola soy un archivero");
+    }
+
+    public void PruebaCallMethodFungus()
+    {
+        print("Metodo llamado desde Fungus");
+        Fungus.Flowchart.BroadcastFungusMessage("ArchiveroClicked");
     }
 }

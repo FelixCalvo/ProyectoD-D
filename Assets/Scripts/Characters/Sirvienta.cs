@@ -1,6 +1,7 @@
 using UnityEngine;
+using Fungus;
 
-public class Cocinero : MonoBehaviour
+public class Sirvienta : MonoBehaviour
 {
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
@@ -14,9 +15,10 @@ public class Cocinero : MonoBehaviour
         
     }
 
-    private void OnMouseDown()
+     private void OnMouseDown()
     {
-        print("Hola soy un Cocinero");
-        Fungus.Flowchart.BroadcastFungusMessage("CocineroClicked");
+        print("Hola soy una Sirvienta");
+        Fungus.Flowchart.BroadcastFungusMessage("SirvientaClicked");
+
     }
 }
