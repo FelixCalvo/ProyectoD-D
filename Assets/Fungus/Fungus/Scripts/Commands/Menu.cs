@@ -54,16 +54,51 @@ namespace Fungus
             bool hideOption = (hideIfVisited && targetBlock != null && targetBlock.GetExecutionCount() > 0) || hideThisOption.Value;
 
             var menuDialog = MenuDialog.GetMenuDialog();
-                if (menuDialog != null)
+            if (menuDialog != null)
+            {
+                menuDialog.SetActive(true);
+
+                var flowchart = GetFlowchart();
+                string displayText = flowchart.SubstituteVariables(text);
+
+                // 🌍 LOCALIZACIÓN: Traducir claves <#CLAVE> igual que en Say
+                var locManagerType = System.Type.GetType("LocalizationManager, Assembly-CSharp");
+                if (locManagerType == null)
                 {
-                    menuDialog.SetActive(true);
-
-                    var flowchart = GetFlowchart();
-                    string displayText = flowchart.SubstituteVariables(text);
-
-                    menuDialog.AddOption(displayText, interactable, hideOption, targetBlock);
+                    foreach (var assembly in System.AppDomain.CurrentDomain.GetAssemblies())
+                    {
+                        locManagerType = assembly.GetType("LocalizationManager");
+                        if (locManagerType != null)
+                        {
+                            break;
+                        }
+                    }
                 }
-            
+                if (locManagerType != null)
+                {
+                    var instanceProp = locManagerType.GetProperty("Instance", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
+                    if (instanceProp != null)
+                    {
+                        var locManager = instanceProp.GetValue(null);
+                        if (locManager != null)
+                        {
+                            displayText = System.Text.RegularExpressions.Regex.Replace(displayText, @"<#([A-Za-z0-9_]+)>", match =>
+                            {
+                                string key = match.Groups[1].Value;
+                                var getTextMethod = locManagerType.GetMethod("GetText");
+                                if (getTextMethod != null)
+                                {
+                                    string translation = (string)getTextMethod.Invoke(locManager, new object[] { key });
+                                    return translation;
+                                }
+                                return match.Value;
+                            });
+                        }
+                    }
+                }
+
+                menuDialog.AddOption(displayText, interactable, hideOption, targetBlock);
+            }
             Continue();
         }
 

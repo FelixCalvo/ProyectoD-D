@@ -77,7 +77,7 @@ public class LocalizationManager : MonoBehaviour
             return;
         }
 
-        Debug.Log($"📄 JSON cargado: {jsonFile.text}");
+        //Debug.Log($"📄 JSON cargado: {jsonFile.text}");
 
         // Parsear JSON línea por línea
         string jsonText = jsonFile.text;
@@ -98,12 +98,12 @@ public class LocalizationManager : MonoBehaviour
                 string key = trimmedLine.Substring(0, colonIndex).Trim().Trim('"').ToUpperInvariant();
                 string value = trimmedLine.Substring(colonIndex + 1).Trim().Trim('"');
                 localizedTexts[key] = value;
-                Debug.Log($"   ✓ [{key}] = {value}");
+                //Debug.Log($"   ✓ [{key}] = {value}");
             }
         }
 
         isLoaded = true;
-        Debug.Log($"✅ Idioma {languageCode} cargado: {localizedTexts.Count} traducciones");
+        //Debug.Log($"✅ Idioma {languageCode} cargado: {localizedTexts.Count} traducciones");
     }
 
     public string GetText(string key)

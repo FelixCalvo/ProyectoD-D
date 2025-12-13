@@ -16,7 +16,7 @@ namespace Fungus
     {
         // Removed this tooltip as users's reported it obscures the text box
         [TextArea(5,10)]
-        [SerializeField] protected string storyText = "";
+        [SerializeField] protected string storyText = "<#>";
 
         [Tooltip("Notes about this story text for other authors, localization, etc.")]
         [SerializeField] protected string description = "";
@@ -113,7 +113,7 @@ namespace Fungus
             string displayText = storyText;
 
             // 🌍 LOCALIZACIÓN: Traducir claves <#CLAVE> antes de procesar
-            UnityEngine.Debug.Log($"[Say] Texto original: {displayText}");
+            //UnityEngine.Debug.Log($"[Say] Texto original: {displayText}");
             
             // Buscar el tipo en todos los assemblies
             var locManagerType = System.Type.GetType("LocalizationManager, Assembly-CSharp");
@@ -125,42 +125,42 @@ namespace Fungus
                     locManagerType = assembly.GetType("LocalizationManager");
                     if (locManagerType != null)
                     {
-                        UnityEngine.Debug.Log($"[Say] LocalizationManager encontrado en: {assembly.GetName().Name}");
+                        //UnityEngine.Debug.Log($"[Say] LocalizationManager encontrado en: {assembly.GetName().Name}");
                         break;
                     }
                 }
             }
             
-            UnityEngine.Debug.Log($"[Say] LocalizationManager Type: {locManagerType}");
+            //UnityEngine.Debug.Log($"[Say] LocalizationManager Type: {locManagerType}");
             
             if (locManagerType != null)
             {
                 var instanceProp = locManagerType.GetProperty("Instance", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
-                UnityEngine.Debug.Log($"[Say] Instance Property: {instanceProp}");
+                //UnityEngine.Debug.Log($"[Say] Instance Property: {instanceProp}");
                 
                 if (instanceProp != null)
                 {
                     var locManager = instanceProp.GetValue(null);
-                    UnityEngine.Debug.Log($"[Say] Instance Value: {locManager}");
+                    //UnityEngine.Debug.Log($"[Say] Instance Value: {locManager}");
                     
                     if (locManager != null)
                     {
                         displayText = System.Text.RegularExpressions.Regex.Replace(displayText, @"<#([A-Za-z0-9_]+)>", match =>
                         {
                             string key = match.Groups[1].Value;
-                            UnityEngine.Debug.Log($"[Say] Encontrada clave: {key}");
+                            //UnityEngine.Debug.Log($"[Say] Encontrada clave: {key}");
                             
                             var getTextMethod = locManagerType.GetMethod("GetText");
                             if (getTextMethod != null)
                             {
                                 string translation = (string)getTextMethod.Invoke(locManager, new object[] { key });
-                                UnityEngine.Debug.Log($"🔄 Traduciendo {key} → {translation}");
+                                //UnityEngine.Debug.Log($"🔄 Traduciendo {key} → {translation}");
                                 return translation;
                             }
                             return match.Value;
                         });
                         
-                        UnityEngine.Debug.Log($"[Say] Texto después de traducción: {displayText}");
+                        //UnityEngine.Debug.Log($"[Say] Texto después de traducción: {displayText}");
                     }
                 }
             }

@@ -130,7 +130,7 @@ public class RTSUnit : MonoBehaviour
             
             // Habilitar NavMeshAgent ahora que la posición es correcta
             _agent.enabled = true;
-            Debug.Log($"[{gameObject.name}] ✅ NavMeshAgent habilitado. isOnNavMesh={_agent.isOnNavMesh}");
+            //Debug.Log($"[{gameObject.name}] ✅ NavMeshAgent habilitado. isOnNavMesh={_agent.isOnNavMesh}");
         }
     }
 

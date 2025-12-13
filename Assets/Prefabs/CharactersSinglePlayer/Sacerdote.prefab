@@ -4725,7 +4725,7 @@ GameObject:
   m_Component:
   - component: {fileID: 6055475074495365870}
   m_Layer: 0
-  m_Name: Cura
+  m_Name: Sacerdote
   m_TagString: Cura
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
