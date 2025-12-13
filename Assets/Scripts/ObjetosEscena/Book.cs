@@ -1,0 +1,29 @@
+using UnityEngine;
+
+public class Book : MonoBehaviour
+{
+    // Start is called once before the first execution of Update after the MonoBehaviour is created
+    void Start()
+    {
+        
+    }
+
+    // Update is called once per frame
+    void Update()
+    {
+        
+    }
+
+    private void OnMouseDown()
+    {
+        print("Hola soy un libro");
+
+        //aqui pondremos codigo de destruccion o desactivacion del objeto
+
+        //Destruccion del objeto
+        //Destroy(gameObject);
+
+        //o podemos desactivar el objeto
+        //gameObject.SetActive(false);
+    }
+}

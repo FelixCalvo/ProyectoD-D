@@ -31,7 +31,36 @@ namespace Fungus
         {
             if (_animator.Value != null)
             {
-                _animator.Value.SetBool(_parameterName.Value, value.Value);
+                var animator = _animator.Value;
+                if (!animator.isActiveAndEnabled)
+                {
+                    Debug.LogWarning($"[SetAnimBool] Animator '{animator.name}' no está activo o habilitado en este momento.");
+                }
+                if (animator.runtimeAnimatorController == null)
+                {
+                    Debug.LogError($"[SetAnimBool] Animator '{animator.name}' no tiene AnimatorController asignado en runtime.");
+                }
+                else
+                {
+                    // Comprobar si el parámetro existe
+                    bool found = false;
+                    foreach (var param in animator.parameters)
+                    {
+                        if (param.name == _parameterName.Value && param.type == AnimatorControllerParameterType.Bool)
+                        {
+                            found = true;
+                            break;
+                        }
+                    }
+                    if (!found)
+                    {
+                        Debug.LogError($"[SetAnimBool] El parámetro bool '{_parameterName.Value}' no existe en el AnimatorController de '{animator.name}'.");
+                    }
+                    else
+                    {
+                        animator.SetBool(_parameterName.Value, value.Value);
+                    }
+                }
             }
 
             Continue();

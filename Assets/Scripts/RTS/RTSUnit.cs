@@ -168,7 +168,7 @@ public class RTSUnit : MonoBehaviour
         if (!IsPositionOccupied(destination))
         {
             _agent.SetDestination(destination);
-            Debug.Log($"[{gameObject.name}] 🎯 Moviendo a {destination}");
+            //Debug.Log($"[{gameObject.name}] 🎯 Moviendo a {destination}");
         }
         else
         {

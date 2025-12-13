@@ -118,7 +118,7 @@ public class LocalizationManager : MonoBehaviour
         string keyUpper = key.ToUpperInvariant();
         if (localizedTexts.TryGetValue(keyUpper, out string value))
         {
-            Debug.Log($"🔍 GetText('{key}') → '{value}'");
+            //Debug.Log($"🔍 GetText('{key}') → '{value}'");
             return value;
         }
 
