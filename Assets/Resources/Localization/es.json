@@ -6,7 +6,7 @@
     "menu_stakes": "¿Qué está en juego si fallamos?",
     "menu_reward": "Hablemos de la recompensa.",
     "menu_accept": "Aceptamos la investigación.",
-    "menu_hold": "Aún no. Necesitamos un momento.",
+    "menu_exit": "Aún no. Necesitamos un momento.",
     "baron4_whyus": "Mis capitanes ven enemigos en cada sombra; mis clérigos ven culpa en cada aliento.",
     "baron5_whyus": "Vosotros estáis fuera de la disputa: paladín, bruja, barbero-cirujano, arquero… neutrales ante mis casas y el reino vecino.",
     "baron6_whyus": "Necesito una verdad que no pueda ser descartada como un arma política.",
@@ -20,8 +20,8 @@
     "baron13_accept": "Bien. La noche comienza ahora: Noche Profunda. Habláis con quien necesitéis: cocinas, armería, capilla, sala de mapas, pasadizos. ",
     "baron131_accept": "Aquí tenéis unas tablillas con marcas que os dirán la situacción de todos ellos, aunque las obras del castillo en algo han variado.",
     "baron14_accept": "Podéis moveros por el castillo. Traed pruebas, no rumores.",
-    "paladin2_hold": "Un momento, mi señor. Debemos ordenar nuestras preguntas.",
-    "baron15_hold": "No os demoréis; la noche no esperará."
+    "paladin2_exit": "Un momento, mi señor. Debemos ordenar nuestras preguntas.",
+    "baron15_exit": "No os demoréis; la noche no esperará."
     "cocinero1_intro": "¿Investigación? Pues llegáis en la peor noche para preguntar. La cocina parece un mercado en guerra.", 
     "menu_cocinero_context": "¿Cómo está la cocina esta noche?",  
     "menu_cocinero_herald": "¿El Heraldo vino por aquí?",
@@ -72,15 +72,4 @@
     "archivero4_requests": "Hace días pidió notas sobre sahumerios calmantes. Dijo que eran para noches de insomnio.",
     "archivero5_exit": "Yo sólo guardo lo que otros escriben."	
 }
-
-
-
- 
-
-}
-
-
-
-
-
 

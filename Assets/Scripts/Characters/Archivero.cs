@@ -18,11 +18,12 @@ public class Archivero : MonoBehaviour
     private void OnMouseDown()
     {
         print("Hola soy un archivero");
+        Fungus.Flowchart.BroadcastFungusMessage("ArchiveroClicked");
     }
 
     public void PruebaCallMethodFungus()
     {
         print("Metodo llamado desde Fungus");
-        Fungus.Flowchart.BroadcastFungusMessage("ArchiveroClicked");
+        
     }
 }

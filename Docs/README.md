@@ -8,6 +8,9 @@ Juego multijugador de rol basado en D&D o Aquelarre, aún por decidir, desarroll
 - **Selección de Personajes**: 4 clases jugables con modelos 3D animados
 - **Movimiento Sincronizado**: Sistema de movimiento con animaciones Walk sincronizadas
 - **Input System**: Control mediante WASD en espacio mundo
+- **Sistema de Diálogos**: Integración con Fungus + localización automática
+- **Diario de Aventuras**: Sistema que registra conversaciones y decisiones del jugador
+- **Localización Multiidioma**: Español, Inglés y Catalán con sistema `<#CLAVES>`
 
 ## 🏗️ Arquitectura del Proyecto
 

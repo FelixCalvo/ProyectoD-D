@@ -1,5 +1,129 @@
 # 📋 Changelog del Proyecto
 
+## [v1.3.0] - 14 de Diciembre de 2025
+
+### 🌍 Sistema de Localización y Diario de Aventuras para Fungus
+
+**Implementación completa de sistema de traducción automática y diario integrado con Fungus**
+
+#### Características Principales
+- ✅ Localización automática con claves `<#KEY>` en comandos Say y Menu
+- ✅ Sistema case-insensitive (CLAVE = clave = Clave)
+- ✅ Diario de aventuras que guarda diálogos y opciones del jugador
+- ✅ Formato con speaker names en negrita
+- ✅ Sistema completamente automático sin configuración manual
+
+#### Archivos Modificados (Fungus Core)
+```
+Assets/Fungus/Fungus/Scripts/Commands/Say.cs     [+50 líneas - Traducción regex]
+Assets/Fungus/Fungus/Scripts/Commands/Menu.cs    [+60 líneas - Traducción + registro]
+```
+
+**Cambios en Say.cs**:
+- Añadido campo `protected string translatedText` para subclases
+- Regex que reemplaza `<#KEY>` con LocalizationManager.GetText()
+- Default text cambiado a `"<#>"` para nuevos comandos
+
+**Cambios en Menu.cs**:
+- Misma lógica de traducción regex que Say.cs
+- Registro automático en MenuJournalTracker por reflexión
+- Sincronización de textos traducidos para diario
+
+#### Scripts Nuevos Creados
+```
+Assets/Scripts/LocalizationManager.cs                      [Singleton - JSON loader]
+Assets/Scripts/DiarioAventuras/AdventureJournal.cs         [Singleton - Storage]
+Assets/Scripts/DiarioAventuras/JournalEntry.cs             [Data class]
+Assets/Scripts/DiarioAventuras/JournalUI.cs                [UI display]
+Assets/Scripts/DiarioAventuras/SayWithJournal.cs          [Fungus command]
+Assets/Scripts/DiarioAventuras/LogSelectedMenu.cs          [Fungus command]
+Assets/Scripts/DiarioAventuras/MenuJournalTracker.cs       [Singleton - Tracker]
+```
+
+**LocalizationManager**:
+```csharp
+// Carga JSON desde Resources/Localization/{es|en|ca}.json
+// Búsqueda case-insensitive con ToUpperInvariant()
+public string GetText(string key)
+{
+    string upperKey = key.ToUpperInvariant();
+    return localizedTexts.ContainsKey(upperKey) 
+        ? localizedTexts[upperKey] 
+        : $"<#{key}>";
+}
+```
+
+**SayWithJournal Command**:
+```csharp
+// Hereda de Say, usa translatedText del padre
+public override void OnEnter()
+{
+    base.OnEnter(); // Ejecuta traducción
+    AdventureJournal.Instance.AddEntry(speakerName, translatedText);
+}
+```
+
+**MenuJournalTracker System**:
+```csharp
+// Menu.cs registra automáticamente:
+RegisterMenuText(targetBlock, displayText);
+
+// LogSelectedMenu recupera:
+string text = MenuJournalTracker.Instance.GetAndClearMenuText(currentBlock);
+AdventureJournal.Instance.AddEntry("Jugador", $"→ {text}");
+```
+
+#### Archivos de Configuración
+```
+Assets/Resources/Localization/es.json    [Traducciones español]
+Assets/Resources/Localization/en.json    [Traducciones inglés]
+Assets/Resources/Localization/ca.json    [Traducciones catalán]
+```
+
+**Estructura JSON**:
+```json
+{
+  "BARON_GREETING": "Saludos, héroes.",
+  "BARON_OPTION1": "¿Por qué nosotros?",
+  "BARON_ANSWER1": "Mis capitanes ven enemigos..."
+}
+```
+
+#### Scripts Eliminados
+```
+Assets/Scripts/DiarioAventuras/RegisterMenuChoice.cs    [Obsoleto - reemplazado por sistema automático]
+```
+
+#### Documentación Nueva
+```
+Docs/FUNGUS_LOCALIZATION_JOURNAL.md    [770 líneas - Guía completa]
+```
+
+**Contenido documentación**:
+- Arquitectura completa del sistema
+- Descripción detallada de cada archivo
+- Flujo completo paso a paso
+- Ejemplos de flowcharts
+- Configuración JSON
+- Troubleshooting
+- Diagrama de arquitectura
+- Mejoras futuras
+
+#### Flujo de Uso
+1. Crear diálogo en Fungus con `<#CLAVES>`
+2. Usar comando **SayWithJournal** en lugar de Say
+3. Añadir **LogSelectedMenu** al inicio de bloques destino de Menu
+4. Sistema traduce y guarda automáticamente en diario
+
+#### Testing Realizado
+- ✅ Traducción automática funciona
+- ✅ Registro de texto de menú exitoso
+- ✅ LogSelectedMenu recupera texto correctamente
+- ✅ Diario muestra entradas con formato correcto
+- ✅ Múltiples menús en secuencia funcionan
+
+---
+
 ## [v1.2.0] - 5 de Diciembre de 2025
 
 ### ✨ Sistema Multiplayer RTS con Photon Fusion

@@ -17,6 +17,9 @@ namespace Fungus
         // Removed this tooltip as users's reported it obscures the text box
         [TextArea(5,10)]
         [SerializeField] protected string storyText = "<#>";
+        
+        // Texto traducido y procesado (accesible desde clases heredadas)
+        protected string translatedText = "";
 
         [Tooltip("Notes about this story text for other authors, localization, etc.")]
         [SerializeField] protected string description = "";
@@ -57,6 +60,14 @@ namespace Fungus
         [SerializeField] protected SayDialog setSayDialog;
 
         protected int executionCount;
+
+        //colocado por mi CHATGPT////////
+        protected string lastDisplayedText;
+        public string GetLastDisplayedText()
+        {
+            return lastDisplayedText;
+        }
+        ////////colocado por mi///////////
 
         #region Public members
 
@@ -168,6 +179,9 @@ namespace Fungus
             {
                 UnityEngine.Debug.LogWarning("[Say] ⚠️ No se encontró LocalizationManager. Asegúrate de que existe en la escena.");
             }
+            
+            // Guardar texto traducido para clases heredadas (como SayWithJournal)
+            translatedText = displayText;
 
             var activeCustomTags = CustomTag.activeCustomTags;
             for (int i = 0; i < activeCustomTags.Count; i++)
@@ -182,8 +196,11 @@ namespace Fungus
 
             string subbedText = flowchart.SubstituteVariables(displayText);
 
+            //colocado por mi CHATGPT////////
+            lastDisplayedText = subbedText;
+            ////////colocado por mi///////////
             sayDialog.Say(subbedText, !extendPrevious, waitForClick, fadeWhenDone, stopVoiceover, waitForVO, voiceOverClip, delegate {
-                Continue();
+                 Continue();
             });
         }
 

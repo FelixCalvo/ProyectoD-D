@@ -97,8 +97,41 @@ namespace Fungus
                     }
                 }
 
+                // 📝 JOURNAL: Registrar el texto traducido para el diario
+                if (targetBlock != null && !string.IsNullOrEmpty(displayText))
+                {
+                    // Buscar MenuJournalTracker en todos los assemblies
+                    System.Type trackerType = null;
+                    foreach (var assembly in System.AppDomain.CurrentDomain.GetAssemblies())
+                    {
+                        trackerType = assembly.GetType("MenuJournalTracker");
+                        if (trackerType != null)
+                        {
+                            break;
+                        }
+                    }
+                    
+                    if (trackerType != null)
+                    {
+                        var instanceProp = trackerType.GetProperty("Instance", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
+                        if (instanceProp != null)
+                        {
+                            var tracker = instanceProp.GetValue(null);
+                            if (tracker != null)
+                            {
+                                var registerMethod = trackerType.GetMethod("RegisterMenuText");
+                                if (registerMethod != null)
+                                {
+                                    registerMethod.Invoke(tracker, new object[] { targetBlock, displayText });
+                                }
+                            }
+                        }
+                    }
+                }
+
                 menuDialog.AddOption(displayText, interactable, hideOption, targetBlock);
             }
+            
             Continue();
         }
 

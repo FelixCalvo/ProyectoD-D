@@ -71,33 +71,86 @@
 
 ---
 
+### 5. [FUNGUS_LOCALIZATION_JOURNAL.md](FUNGUS_LOCALIZATION_JOURNAL.md) - Sistema de Diálogos ⭐ NUEVO
+**Para**: Trabajar con diálogos, localización y sistema de diario
+**Contenido**:
+- Sistema de localización automática con `<#CLAVES>`
+- Diario de aventuras integrado con Fungus
+- Modificaciones en Say.cs y Menu.cs
+- Comandos personalizados: SayWithJournal, LogSelectedMenu
+- Arquitectura MenuJournalTracker
+- Configuración paso a paso con JSON
+- Ejemplos prácticos de flowcharts
+- Troubleshooting de localización
+- Mejoras futuras (serialización, búsqueda, paginación)
+
+**Cuándo leer**:
+- Antes de crear diálogos con Fungus
+- Para configurar localizaciones en múltiples idiomas
+- Si trabajas con el sistema de diario
+- Cuando necesites añadir nuevas traducciones
+
+---
+
+### 6. [FUNGUS_QUICK_REFERENCE.md](FUNGUS_QUICK_REFERENCE.md) - Referencia Rápida ⚡
+**Para**: Consulta rápida durante desarrollo
+**Contenido**:
+- Inicio rápido en 3 pasos
+- Comandos disponibles resumidos
+- Configuración inicial mínima
+- Problemas comunes con soluciones rápidas
+- Diagrama de flujo visual
+- Tips y buenas prácticas
+- Checklist de implementación
+
+**Cuándo leer**:
+- Durante creación de diálogos (tener abierto)
+- Como recordatorio de sintaxis
+- Cuando surgen problemas comunes
+- Para configuración rápida de nuevos flowcharts
+
+---
+
 ## 🗺️ Mapa Conceptual
 
 ```
-                    ┌──────────────────┐
-                    │   README.md      │
-                    │ (EMPEZAR AQUÍ)   │
-                    └────────┬─────────┘
-                             │
-              ┌──────────────┼──────────────┐
-              │              │              │
-              ▼              ▼              ▼
-    ┌─────────────┐  ┌─────────────┐  ┌─────────────┐
-    │ PIVOT_      │  │ NETWORK_    │  │ TROUBLE     │
-    │ SOLUTION    │  │ ARCHITECTURE│  │ SHOOTING    │
-    └─────────────┘  └─────────────┘  └─────────────┘
-         │                  │                  │
-         │                  │                  │
-         └──────────────────┴──────────────────┘
-                            │
-                            ▼
-                   Modificar Código
+                        ┌──────────────────┐
+                        │   README.md      │
+                        │ (EMPEZAR AQUÍ)   │
+                        └────────┬─────────┘
+                                 │
+          ┌──────────────────────┼──────────────────────┐
+          │                      │                      │
+          ▼                      ▼                      ▼
+    ┌──────────┐          ┌──────────┐          ┌──────────┐
+    │ NETWORK_ │          │ PIVOT_   │          │ FUNGUS_  │
+    │ ARCHI    │          │ SOLUTION │          │ LOCAL    │
+    └────┬─────┘          └────┬─────┘          └────┬─────┘
+         │                     │                      │
+         └─────────────────────┴──────────────────────┘
+                               │
+                               ▼
+                     ┌─────────────────┐
+                     │ TROUBLESHOOTING │
+                     └─────────────────┘
+                               │
+                               ▼
+                      Modificar Código
 ```
 
 ## 📖 Rutas de Lectura Recomendadas
 
 ### Para Nuevo Desarrollador
 1. **README.md** → Entender el proyecto completo
+2. **NETWORK_ARCHITECTURE.md** → Entender multiplayer
+3. **FUNGUS_LOCALIZATION_JOURNAL.md** → Entender sistema de diálogos
+
+### Para Trabajar con Diálogos
+1. **FUNGUS_LOCALIZATION_JOURNAL.md** → Guía completa
+2. Configurar JSON de traducciones
+3. Usar SayWithJournal y LogSelectedMenu en Flowcharts
+
+### Para Nuevo Desarrollador (continuación anterior)
 2. **PIVOT_SOLUTION.md** → Entender arquitectura de movimiento
 3. **NETWORK_ARCHITECTURE.md** → Entender sistema de red
 4. **TROUBLESHOOTING.md** → Tener a mano para debugging
