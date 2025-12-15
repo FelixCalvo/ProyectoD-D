@@ -760,10 +760,161 @@ Este sistema proporciona:
 - **Localización automática** para Say y Menu usando `<#CLAVES>`
 - **Diario de aventuras** con formato bonito
 - **Registro automático** de opciones de menú sin configuración manual
+- **Sistema de cámaras Cinemachine** integrado con Fungus
 - **Sistema modular** que extiende Fungus sin romper compatibilidad
 
-**Archivos creados**: 8 scripts
+**Archivos creados**: 11 scripts
 **Archivos modificados**: 2 scripts de Fungus (Say.cs, Menu.cs)
 **Archivos eliminados**: RegisterMenuChoice.cs (obsoleto)
+
+---
+
+## 🎥 Sistema de Cámaras Cinemachine
+
+### Comandos Fungus Personalizados
+
+#### **Activate Dialogue Camera**
+**Ubicación**: `Assets/Scripts/FungusCommands/ActivateDialogueCamera.cs`
+
+**Propósito**: Cambia a una cámara Cinemachine específica durante un diálogo.
+
+**Uso en Fungus**:
+1. En Flowchart, añade el comando: **Camera → Activate Dialogue Camera**
+2. Arrastra la CinemachineCamera del NPC al campo "Target Camera"
+3. El comando cambia automáticamente la prioridad de la cámara a 20
+
+**Ejemplo**:
+```
+[Bloque: Baron_Start]
+→ Activate Dialogue Camera (Target: BaronCamera)
+→ Say With Journal: <#BARON_GREETING>
+→ Menu: <#PLAYER_RESPONSE>
+```
+
+---
+
+#### **Deactivate Dialogue Camera**
+**Ubicación**: `Assets/Scripts/FungusCommands/DeactivateDialogueCamera.cs`
+
+**Propósito**: Vuelve a la cámara principal al finalizar el diálogo.
+
+**Uso en Fungus**:
+1. Al **final del último bloque** de diálogo
+2. Añade: **Camera → Deactivate Dialogue Camera**
+3. Restaura la prioridad de la cámara de diálogo a 10
+
+**Ejemplo**:
+```
+[Bloque: Baron_End]
+→ Say With Journal: <#BARON_FAREWELL>
+→ Deactivate Dialogue Camera
+→ Stop Flowchart
+```
+
+---
+
+### **DialogueCameraManager**
+**Ubicación**: `Assets/Scripts/DialogueCameraManager.cs`
+
+**Propósito**: Singleton que gestiona las prioridades de las cámaras Cinemachine.
+
+**Configuración en Unity**:
+1. Añadir el script a un GameObject (ej: "Controller")
+2. **Dialogue Camera Priority**: 20 (cámaras de diálogo activas)
+3. **Default Camera Priority**: 10 (cámaras inactivas)
+
+**Cómo funciona**:
+- Cinemachine usa **prioridades** para decidir qué cámara mostrar
+- La cámara con mayor Priority se activa automáticamente
+- `ActivateCamera()` sube la Priority a 20
+- `DeactivateDialogueCamera()` la baja a 10
+
+**Requisitos**:
+- Unity Cinemachine 3.x (`com.unity.cinemachine`)
+- Main Camera con `CinemachineBrain` component
+- CinemachineCamera en cada NPC con Priority inicial = 10
+
+---
+
+### **Flujo Completo de Diálogo con Cámara**
+
+```
+[Bloque Inicio - "Talk_Archivero"]
+1. Activate Dialogue Camera → ArchiveroCamera
+2. Say With Journal: <#ARCHIVERO_INTRO>
+3. Menu con opciones...
+4. Call → Bloques según elección
+
+[Bloques Intermedios]
+- Say With Journal (múltiples diálogos)
+- Lógica de juego
+
+[Bloque Final - "Archivero_End"]
+1. Say With Journal: <#ARCHIVERO_BYE>
+2. Deactivate Dialogue Camera
+3. Stop Flowchart
+```
+
+---
+
+### **Troubleshooting Cámaras**
+
+**La cámara no cambia:**
+- Verifica que Main Camera tenga `CinemachineBrain`
+- Confirma que DialogueCameraManager está en la escena
+- Comprueba que Target Camera está asignado en el comando Fungus
+- Revisa prioridades: Main Camera ≤ 10, diálogo = 20
+
+**Cambio brusco de cámara:**
+- En CinemachineCamera → añade `CinemachinePositionComposer`
+- Ajusta "Damping" para transiciones suaves
+
+**No vuelve a Main Camera:**
+- Asegúrate de usar `Deactivate Dialogue Camera` al final
+- Verifica que Main Camera tiene Priority = 10
+
+---
+
+## 🎨 Personalización de UI de Fungus
+
+### **MenuDialog Personalizado**
+
+**Problema**: El MenuDialog original de Fungus aparecía muy arriba en la pantalla, tapando los rostros de los NPCs durante los diálogos.
+
+**Solución implementada**:
+
+1. **Duplicar el prefab original**:
+   - Ubicación original: `Assets/Fungus/Fungus/Prefabs/MenuDialog`
+   - Duplicado (opcional): Crear copia para respaldo
+
+2. **Ajustar posición en escena**:
+   - Arrastrar el prefab MenuDialog al Canvas de la escena
+   - Ajustar posición Y para que no tape los personajes
+   - **IMPORTANTE**: Desactivar el GameObject (checkbox en Inspector)
+   - Dejar en la escena permanentemente
+
+3. **Cómo funciona**:
+   - Fungus busca automáticamente MenuDialog en la escena
+   - Si lo encuentra, usa ese en lugar de instanciar el prefab
+   - Al estar desactivado, no se ve hasta que un comando Menu lo activa
+   - Todos los comandos Menu del Flowchart usan automáticamente esta versión
+
+**Estructura en Hierarchy**:
+```
+Canvas
+  ├── MenuDialog (inactive) ← Versión personalizada con Y ajustada
+  ├── SayDialog (opcional, mismo proceso si es necesario)
+  └── (resto de UI)
+```
+
+**Ventajas**:
+- ✅ No modifica los assets originales de Fungus
+- ✅ No requiere cambiar comandos existentes
+- ✅ Fácil de ajustar en tiempo real
+- ✅ Se mantiene tras actualizaciones de Fungus
+
+**Nota**: El mismo proceso se puede aplicar a `SayDialog` si es necesario ajustar su posición.
+
+---
 
 ¡Todo listo para producción! 🎉

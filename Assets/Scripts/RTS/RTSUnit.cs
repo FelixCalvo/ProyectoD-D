@@ -58,10 +58,14 @@ public class RTSUnit : MonoBehaviour
     /// </summary>
     public bool IsSelected => _isSelected;
 
+    // Componente opcional de obstáculo
+    private NavMeshObstacle _obstacle;
+
     void Awake()
     {
         // Obtener componentes
         _agent = GetComponent<NavMeshAgent>();
+        _obstacle = GetComponent<NavMeshObstacle>();
         _collider = GetComponent<CapsuleCollider>();
         _animator = GetComponentInChildren<Animator>();
 
@@ -69,6 +73,12 @@ public class RTSUnit : MonoBehaviour
         {
             Debug.LogError($"[{gameObject.name}] ❌ No se encontró NavMeshAgent! Agrega el componente al prefab.");
             return;
+        }
+        
+        // Desactivar NavMeshObstacle si existe (no pueden estar activos simultáneamente)
+        if (_obstacle != null)
+        {
+            _obstacle.enabled = false;
         }
         
         // CRÍTICO: Deshabilitar temporalmente para evitar error "Failed to create agent"
@@ -88,9 +98,10 @@ public class RTSUnit : MonoBehaviour
         // Configurar NavMeshAgent (mientras está deshabilitado)
         _agent.updateRotation = false; // Rotamos manualmente el modelo visual
         _agent.speed = 5f;
-        _agent.obstacleAvoidanceType = ObstacleAvoidanceType.NoObstacleAvoidance; // Desactivar evasión dinámica
-        _agent.radius = 0.3f; // Radio para pathfinding estático
+        _agent.obstacleAvoidanceType = ObstacleAvoidanceType.HighQualityObstacleAvoidance; // Evasión activa de otras unidades
+        _agent.radius = 0.5f; // Radio de colisión con otras unidades
         _agent.stoppingDistance = 0.1f; // Distancia mínima por defecto para movimientos precisos
+        _agent.avoidancePriority = 50; // Prioridad media (0-99, menor = mayor prioridad)
 
         // Configurar collider como trigger (no bloquea físicamente)
         if (_collider != null)

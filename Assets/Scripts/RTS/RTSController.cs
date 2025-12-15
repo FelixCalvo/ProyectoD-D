@@ -78,6 +78,12 @@ public class RTSController : MonoBehaviour
         // Click derecho: mover o atacar
         if (Input.GetMouseButtonDown(1))
         {
+            // Bloquear si hay diálogo activo
+            if (DialogueBlocker.Instance != null && DialogueBlocker.Instance.IsDialogueActive)
+            {
+                return;
+            }
+            
             if (_selectedUnit != null)
             {
                 Ray ray = _mainCamera.ScreenPointToRay(Input.mousePosition);
