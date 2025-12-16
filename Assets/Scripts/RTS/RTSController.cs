@@ -111,7 +111,7 @@ public class RTSController : MonoBehaviour
                 // Si no clickeamos una unidad enemiga, mover al suelo
                 if (hitGround)
                 {
-                    Debug.Log($"[MOVIMIENTO] Clic en suelo detectado en {groundHit.point}");
+                    //Debug.Log($"[MOVIMIENTO] Clic en suelo detectado en {groundHit.point}");
                     _selectedUnit.ClearTarget(); // Cancelar cualquier ataque en curso
                     MoveSelectedUnitTo(groundHit.point);
                 }
