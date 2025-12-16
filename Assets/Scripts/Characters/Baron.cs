@@ -3,21 +3,34 @@ using Fungus;
 
 public class Baron : MonoBehaviour
 {
-    // Start is called once before the first execution of Update after the MonoBehaviour is created
-    void Start()
-    {
-
-    }
-
-    // Update is called once per frame
     void Update()
     {
-
-    }
-
-    private void OnMouseDown()
-    {
-        print("Hola soy un Barón");
-        Fungus.Flowchart.BroadcastFungusMessage("BaronClicked");    
+        // Detectar click atravesando paredes transparentes
+        if (Input.GetMouseButtonDown(0))
+        {
+            Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
+            RaycastHit[] allHits = Physics.RaycastAll(ray, 1000f);
+            
+            // Ordenar por distancia
+            System.Array.Sort(allHits, (a, b) => a.distance.CompareTo(b.distance));
+            
+            foreach (RaycastHit hit in allHits)
+            {
+                // Ignorar paredes transparentes
+                if (hit.collider.gameObject.layer == LayerMask.NameToLayer("ObjetosTransparentes"))
+                    continue;
+                
+                // Si el click es en este NPC
+                if (hit.collider.gameObject == gameObject)
+                {
+                    print("Hola soy un Barón");
+                    Fungus.Flowchart.BroadcastFungusMessage("BaronClicked");
+                    return;
+                }
+                
+                // Si encontramos otro objeto primero, salir
+                break;
+            }
+        }
     }
 }

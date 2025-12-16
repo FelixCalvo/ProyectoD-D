@@ -61,16 +61,29 @@ public class RTSController : MonoBehaviour
         if (Input.GetMouseButtonDown(0))
         {
             Ray ray = _mainCamera.ScreenPointToRay(Input.mousePosition);
-            RaycastHit hit;
             
-            // Primero verificar si clickeamos una unidad
-            if (Physics.Raycast(ray, out hit, 1000f, unitLayer))
+            // Usar RaycastAll para atravesar paredes transparentes
+            RaycastHit[] allHits = Physics.RaycastAll(ray, 1000f);
+            
+            // Ordenar por distancia (más cercano primero)
+            System.Array.Sort(allHits, (a, b) => a.distance.CompareTo(b.distance));
+            
+            // Buscar la primera unidad, ignorando objetos transparentes
+            foreach (RaycastHit hit in allHits)
             {
-                RTSUnit unit = hit.collider.GetComponent<RTSUnit>();
-                if (unit != null && controllableUnits.Contains(unit))
+                // Ignorar objetos en capa "ObjetosTransparentes"
+                if (hit.collider.gameObject.layer == LayerMask.NameToLayer("ObjetosTransparentes"))
+                    continue;
+                
+                // Verificar si es una unidad
+                if (((1 << hit.collider.gameObject.layer) & unitLayer) != 0)
                 {
-                    SelectUnit(unit);
-                    return;
+                    RTSUnit unit = hit.collider.GetComponent<RTSUnit>();
+                    if (unit != null && controllableUnits.Contains(unit))
+                    {
+                        SelectUnit(unit);
+                        return;
+                    }
                 }
             }
         }
@@ -88,11 +101,39 @@ public class RTSController : MonoBehaviour
             {
                 Ray ray = _mainCamera.ScreenPointToRay(Input.mousePosition);
                 
-                // Hacer ambos raycast para decidir cuál usar
-                RaycastHit unitHit;
-                RaycastHit groundHit;
-                bool hitUnit = Physics.Raycast(ray, out unitHit, 1000f, unitLayer);
-                bool hitGround = Physics.Raycast(ray, out groundHit, 1000f, groundLayer);
+                // Usar RaycastAll para atravesar paredes transparentes
+                RaycastHit[] allHits = Physics.RaycastAll(ray, 1000f);
+                
+                RaycastHit unitHit = default;
+                RaycastHit groundHit = default;
+                bool hitUnit = false;
+                bool hitGround = false;
+                
+                // Buscar el primer hit de unidad y de suelo, ignorando objetos transparentes
+                foreach (RaycastHit hit in allHits)
+                {
+                    // Ignorar objetos en capa "ObjetosTransparentes"
+                    if (hit.collider.gameObject.layer == LayerMask.NameToLayer("ObjetosTransparentes"))
+                        continue;
+                    
+                    // Detectar unidad
+                    if (((1 << hit.collider.gameObject.layer) & unitLayer) != 0 && !hitUnit)
+                    {
+                        unitHit = hit;
+                        hitUnit = true;
+                    }
+                    
+                    // Detectar suelo
+                    if (((1 << hit.collider.gameObject.layer) & groundLayer) != 0 && !hitGround)
+                    {
+                        groundHit = hit;
+                        hitGround = true;
+                    }
+                    
+                    // Si ya encontramos ambos, salir
+                    if (hitUnit && hitGround)
+                        break;
+                }
                 
                 // Prioridad: Si clickeamos una unidad diferente, atacar
                 if (hitUnit)
@@ -213,7 +254,7 @@ public class RTSController : MonoBehaviour
         // Mostrar marcador visual de destino (opcional)
         ShowDestinationMarker(destination);
         
-        Debug.Log($"{_selectedUnit.UnitName} moviéndose a {destination}");
+        //Debug.Log($"{_selectedUnit.UnitName} moviéndose a {destination}");
     }
     
     /// <summary>

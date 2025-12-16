@@ -13,6 +13,7 @@ public class DoorTrigger : MonoBehaviour
     private Animator doorAnimator;
     private Collider doorBlocker;
     private BoxCollider triggerCollider;
+    private UnityEngine.AI.NavMeshObstacle navMeshObstacle;
     private bool hasBeenOpened = false;
     private bool playerInRange = false;
 
@@ -48,6 +49,16 @@ public class DoorTrigger : MonoBehaviour
         if (doorBlocker == null)
         {
             Debug.LogWarning($"[{gameObject.name}] No hay Collider sólido. Añade uno para bloquear el paso.");
+        }
+        
+        // Buscar o añadir NavMeshObstacle para bloquear el NavMeshAgent
+        navMeshObstacle = GetComponent<UnityEngine.AI.NavMeshObstacle>();
+        if (navMeshObstacle == null)
+        {
+            Debug.LogWarning($"[{gameObject.name}] Añadiendo NavMeshObstacle para bloquear el paso del NavMeshAgent.");
+            navMeshObstacle = gameObject.AddComponent<UnityEngine.AI.NavMeshObstacle>();
+            navMeshObstacle.carving = true;
+            navMeshObstacle.carveOnlyStationary = false;
         }
     }
 
@@ -107,6 +118,12 @@ public class DoorTrigger : MonoBehaviour
         if (doorBlocker != null)
         {
             doorBlocker.enabled = false;
+        }
+        
+        // Desactivar NavMeshObstacle para permitir paso
+        if (navMeshObstacle != null)
+        {
+            navMeshObstacle.enabled = false;
         }
     }
 }
