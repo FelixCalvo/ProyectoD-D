@@ -5,6 +5,12 @@ public class Baron : MonoBehaviour
 {
     void Update()
     {
+        // No permitir clicks si hay diálogo activo
+        if (DialogueBlocker.Instance != null && DialogueBlocker.Instance.IsDialogueActive)
+        {
+            return;
+        }
+        
         // Detectar click atravesando paredes transparentes
         if (Input.GetMouseButtonDown(0))
         {
@@ -24,7 +30,7 @@ public class Baron : MonoBehaviour
                 if (hit.collider.gameObject == gameObject)
                 {
                     print("Hola soy un Barón");
-                    Fungus.Flowchart.BroadcastFungusMessage("BaronClicked");
+                    Fungus.Flowchart.BroadcastFungusMessage("BaronClicked");//activa el block inicial de Baron
                     return;
                 }
                 

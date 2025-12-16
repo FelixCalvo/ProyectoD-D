@@ -208,6 +208,9 @@ public class RTSController : MonoBehaviour
         _selectedUnit = unit;
         _selectedUnit.SetSelected(true);
         
+        // Actualizar player activo global
+        HelperClass.ActivePlayer = unit.gameObject;
+        
         Debug.Log($"Unidad seleccionada: {unit.UnitName}");
         
         // Notificar a la UI (si existe)

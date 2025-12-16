@@ -5,6 +5,12 @@ public class Sirvienta : MonoBehaviour
 {
     void Update()
     {
+        // No permitir clicks si hay diálogo activo
+        if (DialogueBlocker.Instance != null && DialogueBlocker.Instance.IsDialogueActive)
+        {
+            return;
+        }
+        
         // Detectar click atravesando paredes transparentes
         if (Input.GetMouseButtonDown(0))
         {
