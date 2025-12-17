@@ -9,6 +9,8 @@ public class TransparentarParedes : MonoBehaviour
     public float alturaCapsule = 2.0f; // Altura del jugador
     public float radioCapsule = 0.4f; // Radio del CapsuleCast
     public float tiempoEsperaRestaurar = 0.5f; // Tiempo antes de restaurar
+    [Range(0f, 1f)]
+    public float valorTransparencia = 0.2f; // 0 = invisible, 1 = opaco
     public LayerMask layerObjetosTransparentes;
 
     // Diccionario para almacenar materiales originales
@@ -21,6 +23,13 @@ public class TransparentarParedes : MonoBehaviour
     void Update()
     {
         if (player == null) return;
+
+        // Si hay un diálogo activo, restaurar todas las paredes
+        if (DialogueBlocker.Instance != null && DialogueBlocker.Instance.IsDialogueActive)
+        {
+            RestaurarTodasLasParedes();
+            return;
+        }
 
         Vector3 posPies = player.transform.position;
         Vector3 posCabeza = posPies + Vector3.up * alturaCapsule;
@@ -185,7 +194,7 @@ public class TransparentarParedes : MonoBehaviour
 
                 // Ajustar alpha
                 Color color = materiales[i].color;
-                color.a = 0.3f;
+                color.a = valorTransparencia;
                 materiales[i].color = color;
             }
             renderer.materials = materiales;
@@ -212,6 +221,21 @@ public class TransparentarParedes : MonoBehaviour
 
         // Restaurar layer (asumiendo que era Default)
         obj.layer = 0;
+    }
+
+    void RestaurarTodasLasParedes()
+    {
+        // Restaurar todos los objetos transparentes inmediatamente
+        List<GameObject> todosLosObjetos = new List<GameObject>(objetosTransparentes);
+        
+        foreach (GameObject obj in todosLosObjetos)
+        {
+            RestaurarOpacidad(obj);
+        }
+        
+        // Limpiar todas las colecciones
+        objetosTransparentes.Clear();
+        tiemposSinBloquear.Clear();
     }
 
     void OnDrawGizmos()
