@@ -1,4 +1,5 @@
 using UnityEngine;
+using System.Collections.Generic;
 
 /// <summary>
 /// Clase centralizada para configuración global del juego.
@@ -23,6 +24,11 @@ public static class HelperClass
     private static GameObject _activePlayer;
     
     /// <summary>
+    /// Lista de todos los players seleccionados actualmente (para selección múltiple).
+    /// </summary>
+    private static List<GameObject> _selectedPlayers = new List<GameObject>();
+    
+    /// <summary>
     /// Obtiene o establece el player activo.
     /// </summary>
     public static GameObject ActivePlayer
@@ -44,6 +50,31 @@ public static class HelperClass
     public static string ActivePlayerName
     {
         get { return _activePlayer != null ? _activePlayer.name : "Ninguno"; }
+    }
+    
+    /// <summary>
+    /// Obtiene la lista de players seleccionados (solo lectura).
+    /// </summary>
+    public static List<GameObject> SelectedPlayers
+    {
+        get { return new List<GameObject>(_selectedPlayers); }
+    }
+    
+    /// <summary>
+    /// Establece la lista de players seleccionados.
+    /// </summary>
+    public static void SetSelectedPlayers(List<GameObject> players)
+    {
+        _selectedPlayers = new List<GameObject>(players);
+        Debug.Log($"[HelperClass] {_selectedPlayers.Count} players seleccionados");
+    }
+    
+    /// <summary>
+    /// Obtiene el número de players seleccionados.
+    /// </summary>
+    public static int SelectedPlayersCount
+    {
+        get { return _selectedPlayers.Count; }
     }
 }
 

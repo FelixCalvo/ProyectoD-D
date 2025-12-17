@@ -20,8 +20,13 @@ public class RTSController : MonoBehaviour
     
     // ===== ESTADO =====
     private RTSUnit _selectedUnit;
+    private List<RTSUnit> _selectedUnits = new List<RTSUnit>();
     private Camera _mainCamera;
     private GameObject _currentDestinationMarker;
+    
+    // Selección por rectángulo
+    private bool _isDragging = false;
+    private Vector3 _dragStartPos;
     
     /// <summary>
     /// Unidad actualmente seleccionada
@@ -35,14 +40,14 @@ public class RTSController : MonoBehaviour
         // Auto-detectar unidades si la lista está vacía
         if (controllableUnits.Count == 0)
         {
-            controllableUnits.AddRange(FindObjectsOfType<RTSUnit>());
+            controllableUnits.AddRange(FindObjectsByType<RTSUnit>(FindObjectsSortMode.None));
             Debug.Log($"Auto-detectadas {controllableUnits.Count} unidades");
         }
         
         // Seleccionar primera unidad por defecto
         if (controllableUnits.Count > 0)
         {
-            SelectUnit(controllableUnits[0]);
+            SelectSingleUnit(controllableUnits[0]);
         }
     }
     
@@ -57,33 +62,29 @@ public class RTSController : MonoBehaviour
     /// </summary>
     private void HandleMouseInput()
     {
-        // Click izquierdo
+        // Iniciar arrastre para selección múltiple
         if (Input.GetMouseButtonDown(0))
         {
-            Ray ray = _mainCamera.ScreenPointToRay(Input.mousePosition);
-            
-            // Usar RaycastAll para atravesar paredes transparentes
-            RaycastHit[] allHits = Physics.RaycastAll(ray, 1000f);
-            
-            // Ordenar por distancia (más cercano primero)
-            System.Array.Sort(allHits, (a, b) => a.distance.CompareTo(b.distance));
-            
-            // Buscar la primera unidad, ignorando objetos transparentes
-            foreach (RaycastHit hit in allHits)
+            _isDragging = true;
+            _dragStartPos = Input.mousePosition;
+        }
+        
+        // Soltar botón: finalizar selección
+        if (Input.GetMouseButtonUp(0))
+        {
+            if (_isDragging)
             {
-                // Ignorar objetos en capa "ObjetosTransparentes"
-                if (hit.collider.gameObject.layer == LayerMask.NameToLayer("ObjetosTransparentes"))
-                    continue;
+                _isDragging = false;
                 
-                // Verificar si es una unidad
-                if (((1 << hit.collider.gameObject.layer) & unitLayer) != 0)
+                // Si fue un click simple (sin arrastre), selección individual
+                if (Vector3.Distance(_dragStartPos, Input.mousePosition) < 5f)
                 {
-                    RTSUnit unit = hit.collider.GetComponent<RTSUnit>();
-                    if (unit != null && controllableUnits.Contains(unit))
-                    {
-                        SelectUnit(unit);
-                        return;
-                    }
+                    HandleSingleSelection();
+                }
+                else
+                {
+                    // Selección múltiple por rectángulo
+                    HandleBoxSelection();
                 }
             }
         }
@@ -97,7 +98,8 @@ public class RTSController : MonoBehaviour
                 return;
             }
             
-            if (_selectedUnit != null)
+            // Si hay unidades seleccionadas (una o múltiples)
+            if (_selectedUnits.Count > 0)
             {
                 Ray ray = _mainCamera.ScreenPointToRay(Input.mousePosition);
                 
@@ -140,25 +142,26 @@ public class RTSController : MonoBehaviour
                 {
                     RTSUnit targetUnit = unitHit.collider.GetComponent<RTSUnit>();
                     
-                    if (targetUnit != null && targetUnit != _selectedUnit)
+                    if (targetUnit != null && !_selectedUnits.Contains(targetUnit))
                     {
-                        // Atacar la unidad clickeada
-                        _selectedUnit.AttackTarget(targetUnit);
-                        Debug.Log($"[ATAQUE] {_selectedUnit.UnitName} ordenado atacar a {targetUnit.UnitName}");
-                        return; // Salir para no procesar el movimiento
+                        // Todas las unidades seleccionadas atacan el objetivo
+                        foreach (RTSUnit unit in _selectedUnits)
+                        {
+                            unit.AttackTarget(targetUnit);
+                        }
+                        Debug.Log($"[ATAQUE] {_selectedUnits.Count} unidades ordenadas atacar a {targetUnit.UnitName}");
+                        return;
                     }
                 }
                 
                 // Si no clickeamos una unidad enemiga, mover al suelo
                 if (hitGround)
                 {
-                    //Debug.Log($"[MOVIMIENTO] Clic en suelo detectado en {groundHit.point}");
-                    _selectedUnit.ClearTarget(); // Cancelar cualquier ataque en curso
-                    MoveSelectedUnitTo(groundHit.point);
+                    MoveSelectedUnitsTo(groundHit.point);
                 }
                 else
                 {
-                    Debug.LogWarning($"[ERROR] Clic derecho no detectó ni unidad ni suelo. UnitLayer: {unitLayer.value}, GroundLayer: {groundLayer.value}");
+                    Debug.LogWarning($"[ERROR] Clic derecho no detectó ni unidad ni suelo.");
                 }
             }
         }
@@ -194,27 +197,104 @@ public class RTSController : MonoBehaviour
     }
     
     /// <summary>
-    /// Selecciona una unidad específica
+    /// Maneja selección de una sola unidad con click
     /// </summary>
-    private void SelectUnit(RTSUnit unit)
+    private void HandleSingleSelection()
     {
-        // Deseleccionar unidad anterior
-        if (_selectedUnit != null)
+        Ray ray = _mainCamera.ScreenPointToRay(Input.mousePosition);
+        RaycastHit[] allHits = Physics.RaycastAll(ray, 1000f);
+        System.Array.Sort(allHits, (a, b) => a.distance.CompareTo(b.distance));
+        
+        foreach (RaycastHit hit in allHits)
         {
-            _selectedUnit.SetSelected(false);
+            if (hit.collider.gameObject.layer == LayerMask.NameToLayer("ObjetosTransparentes"))
+                continue;
+            
+            if (((1 << hit.collider.gameObject.layer) & unitLayer) != 0)
+            {
+                RTSUnit unit = hit.collider.GetComponent<RTSUnit>();
+                if (unit != null && controllableUnits.Contains(unit))
+                {
+                    SelectSingleUnit(unit);
+                    return;
+                }
+            }
         }
         
-        // Seleccionar nueva unidad
-        _selectedUnit = unit;
-        _selectedUnit.SetSelected(true);
+        // Si no se seleccionó nada, deseleccionar todo
+        DeselectAll();
+    }
+    
+    /// <summary>
+    /// Maneja selección múltiple por rectángulo
+    /// </summary>
+    private void HandleBoxSelection()
+    {
+        DeselectAll();
         
-        // Actualizar player activo global
+        // Crear rectángulo sin invertir coordenadas
+        Vector3 start = _dragStartPos;
+        Vector3 end = Input.mousePosition;
+        
+        float minX = Mathf.Min(start.x, end.x);
+        float maxX = Mathf.Max(start.x, end.x);
+        float minY = Mathf.Min(start.y, end.y);
+        float maxY = Mathf.Max(start.y, end.y);
+        
+        // Añadir margen de tolerancia para capturar mejor unidades parcialmente visibles
+        float margin = 20f;
+        Rect selectionRect = Rect.MinMaxRect(minX - margin, minY - margin, maxX + margin, maxY + margin);
+        
+        foreach (RTSUnit unit in controllableUnits)
+        {
+            // Usar punto un poco más arriba (cabeza aproximada) en lugar de los pies
+            Vector3 worldPos = unit.transform.position + Vector3.up * 1f;
+            Vector3 screenPos = _mainCamera.WorldToScreenPoint(worldPos);
+            
+            // Solo verificar que esté dentro del rectángulo (más tolerante)
+            if (selectionRect.Contains(screenPos))
+            {
+                _selectedUnits.Add(unit);
+                unit.SetSelected(true);
+            }
+        }
+        
+        // Actualizar player activo y lista global
+        if (_selectedUnits.Count > 0)
+        {
+            _selectedUnit = _selectedUnits[0];
+            HelperClass.ActivePlayer = _selectedUnit.gameObject;
+            
+            // Actualizar lista global de seleccionados
+            List<GameObject> selectedObjects = new List<GameObject>();
+            foreach (RTSUnit unit in _selectedUnits)
+            {
+                selectedObjects.Add(unit.gameObject);
+            }
+            HelperClass.SetSelectedPlayers(selectedObjects);
+            
+            Debug.Log($"{_selectedUnits.Count} unidades seleccionadas");
+        }
+    }
+    
+    /// <summary>
+    /// Selecciona una sola unidad
+    /// </summary>
+    private void SelectSingleUnit(RTSUnit unit)
+    {
+        DeselectAll();
+        
+        _selectedUnit = unit;
+        _selectedUnits.Add(unit);
+        unit.SetSelected(true);
+        
         HelperClass.ActivePlayer = unit.gameObject;
+        HelperClass.SetSelectedPlayers(new List<GameObject> { unit.gameObject });
         
         Debug.Log($"Unidad seleccionada: {unit.UnitName}");
         
         // Notificar a la UI (si existe)
-        RTSUI ui = FindObjectOfType<RTSUI>();
+        RTSUI ui = FindFirstObjectByType<RTSUI>();
         if (ui != null)
         {
             ui.UpdateSelectedUnit(_selectedUnit);
@@ -228,7 +308,7 @@ public class RTSController : MonoBehaviour
     {
         if (index >= 0 && index < controllableUnits.Count)
         {
-            SelectUnit(controllableUnits[index]);
+            SelectSingleUnit(controllableUnits[index]);
         }
     }
     
@@ -242,7 +322,7 @@ public class RTSController : MonoBehaviour
         int currentIndex = controllableUnits.IndexOf(_selectedUnit);
         int nextIndex = (currentIndex + 1) % controllableUnits.Count;
         
-        SelectUnit(controllableUnits[nextIndex]);
+        SelectSingleUnit(controllableUnits[nextIndex]);
     }
     
     /// <summary>
@@ -299,12 +379,153 @@ public class RTSController : MonoBehaviour
         if (controllableUnits.Contains(unit))
         {
             controllableUnits.Remove(unit);
+            _selectedUnits.Remove(unit);
             
             // Si era la unidad seleccionada, seleccionar otra
             if (_selectedUnit == unit && controllableUnits.Count > 0)
             {
-                SelectUnit(controllableUnits[0]);
+                SelectSingleUnit(controllableUnits[0]);
             }
         }
+    }
+    
+    /// <summary>
+    /// Deselecciona todas las unidades
+    /// </summary>
+    private void DeselectAll()
+    {
+        foreach (RTSUnit unit in _selectedUnits)
+        {
+            unit.SetSelected(false);
+        }
+        _selectedUnits.Clear();
+        HelperClass.SetSelectedPlayers(new List<GameObject>());
+        _selectedUnit = null;
+    }
+    
+    /// <summary>
+    /// Mueve todas las unidades seleccionadas a una posición
+    /// </summary>
+    private void MoveSelectedUnitsTo(Vector3 destination)
+    {
+        if (_selectedUnits.Count == 0) return;
+        
+        // Si solo hay una unidad, moverla directamente
+        if (_selectedUnits.Count == 1)
+        {
+            _selectedUnits[0].ClearTarget();
+            _selectedUnits[0].MoveTo(destination);
+        }
+        else
+        {
+            // Para múltiples unidades, usar formación loose
+            Vector3[] positions = CalculateFormationPositions(destination, _selectedUnits.Count);
+            
+            for (int i = 0; i < _selectedUnits.Count; i++)
+            {
+                _selectedUnits[i].ClearTarget();
+                _selectedUnits[i].MoveTo(positions[i]);
+            }
+        }
+        
+        ShowDestinationMarker(destination);
+        Debug.Log($"{_selectedUnits.Count} unidades moviéndose a {destination}");
+    }
+    
+    /// <summary>
+    /// Calcula posiciones en formación circular alrededor de un punto
+    /// </summary>
+    private Vector3[] CalculateFormationPositions(Vector3 center, int unitCount)
+    {
+        Vector3[] positions = new Vector3[unitCount];
+        
+        // Radio suficiente para evitar que se empujen (stopping distance + margen)
+        float baseRadius = 1.5f;
+        
+        // Si son 2 unidades, ponerlas una al lado de la otra
+        if (unitCount == 2)
+        {
+            positions[0] = center + new Vector3(-baseRadius * 0.7f, 0, 0);
+            positions[1] = center + new Vector3(baseRadius * 0.7f, 0, 0);
+        }
+        // Si son 3 unidades, triángulo
+        else if (unitCount == 3)
+        {
+            positions[0] = center + new Vector3(0, 0, baseRadius);
+            positions[1] = center + new Vector3(-baseRadius * 0.866f, 0, -baseRadius * 0.5f);
+            positions[2] = center + new Vector3(baseRadius * 0.866f, 0, -baseRadius * 0.5f);
+        }
+        // Si son 4 unidades, usar formación en cuadrado
+        else if (unitCount == 4)
+        {
+            float offset = baseRadius * 0.7f;
+            positions[0] = center + new Vector3(-offset, 0, -offset);
+            positions[1] = center + new Vector3(offset, 0, -offset);
+            positions[2] = center + new Vector3(-offset, 0, offset);
+            positions[3] = center + new Vector3(offset, 0, offset);
+        }
+        // Formación circular para otras cantidades
+        else
+        {
+            float angleStep = 360f / unitCount;
+            
+            for (int i = 0; i < unitCount; i++)
+            {
+                float angle = i * angleStep * Mathf.Deg2Rad;
+                float x = center.x + baseRadius * Mathf.Cos(angle);
+                float z = center.z + baseRadius * Mathf.Sin(angle);
+                positions[i] = new Vector3(x, center.y, z);
+            }
+        }
+        
+        return positions;
+    }
+    
+    /// <summary>
+    /// Crea un rectángulo en coordenadas de pantalla
+    /// </summary>
+    private Rect GetScreenRect(Vector3 screenPos1, Vector3 screenPos2)
+    {
+        screenPos1.y = Screen.height - screenPos1.y;
+        screenPos2.y = Screen.height - screenPos2.y;
+        
+        Vector3 bottomLeft = Vector3.Min(screenPos1, screenPos2);
+        Vector3 topRight = Vector3.Max(screenPos1, screenPos2);
+        
+        return Rect.MinMaxRect(bottomLeft.x, bottomLeft.y, topRight.x, topRight.y);
+    }
+    
+    /// <summary>
+    /// Dibuja el rectángulo de selección en pantalla
+    /// </summary>
+    void OnGUI()
+    {
+        if (_isDragging)
+        {
+            Rect rect = GetScreenRect(_dragStartPos, Input.mousePosition);
+            DrawScreenRect(rect, new Color(1f, 0f, 0f, 0.25f)); // Rojo semi-transparente
+            DrawScreenRectBorder(rect, 2, new Color(1f, 0f, 0f)); // Borde rojo
+        }
+    }
+    
+    /// <summary>
+    /// Dibuja un rectángulo lleno en pantalla
+    /// </summary>
+    private void DrawScreenRect(Rect rect, Color color)
+    {
+        GUI.color = color;
+        GUI.DrawTexture(rect, Texture2D.whiteTexture);
+        GUI.color = Color.white;
+    }
+    
+    /// <summary>
+    /// Dibuja el borde de un rectángulo en pantalla
+    /// </summary>
+    private void DrawScreenRectBorder(Rect rect, float thickness, Color color)
+    {
+        DrawScreenRect(new Rect(rect.xMin, rect.yMin, rect.width, thickness), color); // Arriba
+        DrawScreenRect(new Rect(rect.xMin, rect.yMin, thickness, rect.height), color); // Izquierda
+        DrawScreenRect(new Rect(rect.xMax - thickness, rect.yMin, thickness, rect.height), color); // Derecha
+        DrawScreenRect(new Rect(rect.xMin, rect.yMax - thickness, rect.width, thickness), color); // Abajo
     }
 }

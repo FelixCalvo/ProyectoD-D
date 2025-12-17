@@ -70,7 +70,7 @@ public class DialogueCameraManager : MonoBehaviour
             if (pc.player == activePlayer)
             {
                 pc.cinemachineCamera.Priority = activePlayerCameraPriority;
-                Debug.Log($"Cámara de {pc.player.name} activada (Prioridad: {activePlayerCameraPriority})");
+                //Debug.Log($"Cámara de {pc.player.name} activada (Prioridad: {activePlayerCameraPriority})");
             }
             else
             {
