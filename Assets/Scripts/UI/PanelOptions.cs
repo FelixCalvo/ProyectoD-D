@@ -14,7 +14,6 @@ public class PanelOptions : MonoBehaviour
             Debug.LogError("No se encontró Animator en Panel_Options");
         }
     }
-
     public void ToggleUnicoBoton()
     {
         if (isOpen)
@@ -29,7 +28,6 @@ public class PanelOptions : MonoBehaviour
 
     void Open()
     {
-        gameObject.SetActive(true);
         animator.SetTrigger("Open");
         isOpen = true;
     }
@@ -38,11 +36,5 @@ public class PanelOptions : MonoBehaviour
     {
         animator.SetTrigger("Close");
         isOpen = false;
-    }
-
-    // Llama este método desde el evento de animación al final de la animación Close
-    public void OnCloseAnimationComplete()
-    {
-        gameObject.SetActive(false);
     }
 }
