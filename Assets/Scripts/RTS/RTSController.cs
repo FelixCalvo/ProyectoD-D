@@ -12,8 +12,18 @@ public class RTSController : MonoBehaviour
     [SerializeField] private List<RTSUnit> controllableUnits = new List<RTSUnit>();
     
     [Header("Input Layers")]
-    [SerializeField] private LayerMask groundLayer = ~0; // Todo por defecto
-    [SerializeField] private LayerMask unitLayer = ~0;
+    [SerializeField] private LayerMask groundLayer; // Solo layer "Ground"
+    [SerializeField] private LayerMask unitLayer; // Solo layer "Player"
+    
+    void Awake()
+    {
+        // SIEMPRE forzar groundLayer a SOLO detectar "Ground"
+        groundLayer = LayerMask.GetMask("Ground");
+        
+        // Configurar unitLayer si no está asignado
+        if (unitLayer == 0)
+            unitLayer = LayerMask.GetMask("Player");
+    }
     
     [Header("Visual Feedback")]
     [SerializeField] private GameObject destinationMarkerPrefab;
@@ -106,6 +116,9 @@ public class RTSController : MonoBehaviour
                 // Usar RaycastAll para atravesar paredes transparentes
                 RaycastHit[] allHits = Physics.RaycastAll(ray, 1000f);
                 
+                // Ordenar hits por distancia (más cercano primero)
+                System.Array.Sort(allHits, (a, b) => a.distance.CompareTo(b.distance));
+                
                 RaycastHit unitHit = default;
                 RaycastHit groundHit = default;
                 bool hitUnit = false;
@@ -118,15 +131,16 @@ public class RTSController : MonoBehaviour
                     if (hit.collider.gameObject.layer == LayerMask.NameToLayer("ObjetosTransparentes"))
                         continue;
                     
-                    // Detectar unidad
+                    // Detectar unidad (tomar la más cercana)
                     if (((1 << hit.collider.gameObject.layer) & unitLayer) != 0 && !hitUnit)
                     {
                         unitHit = hit;
                         hitUnit = true;
                     }
                     
-                    // Detectar suelo
-                    if (((1 << hit.collider.gameObject.layer) & groundLayer) != 0 && !hitGround)
+                    // Detectar suelo - SOLO aceptar layer "Ground"
+                    string layerName = LayerMask.LayerToName(hit.collider.gameObject.layer);
+                    if (layerName == "Ground" && !hitGround)
                     {
                         groundHit = hit;
                         hitGround = true;
@@ -157,11 +171,16 @@ public class RTSController : MonoBehaviour
                 // Si no clickeamos una unidad enemiga, mover al suelo
                 if (hitGround)
                 {
+                    Debug.Log($"[RTS] Destino: {groundHit.point} | Obj: {groundHit.collider.name} | Layer: {LayerMask.LayerToName(groundHit.collider.gameObject.layer)} | Dist: {groundHit.distance:F2}m");
                     MoveSelectedUnitsTo(groundHit.point);
                 }
                 else
                 {
-                    Debug.LogWarning($"[ERROR] Clic derecho no detectó ni unidad ni suelo.");
+                    Debug.LogWarning($"[RTS] ❌ No se detectó suelo. Hits totales: {allHits.Length}");
+                    if (allHits.Length > 0)
+                    {
+                        Debug.Log($"  Primer hit: {allHits[0].collider.name} (Layer: {LayerMask.LayerToName(allHits[0].collider.gameObject.layer)})");
+                    }
                 }
             }
         }
@@ -221,8 +240,8 @@ public class RTSController : MonoBehaviour
             }
         }
         
-        // Si no se seleccionó nada, deseleccionar todo
-        DeselectAll();
+        // NO deseleccionar si hacemos clic en el suelo - mantener selección actual
+        // Solo deseleccionar si haces Shift+Click o seleccionas otra cosa
     }
     
     /// <summary>

@@ -13,14 +13,12 @@ public class TransparentarParedes : MonoBehaviour
     public float valorTransparencia = 0.2f; // 0 = invisible, 1 = opaco
     public LayerMask layerObjetosTransparentes;
 
-    // Diccionario para almacenar materiales originales
+    // Diccionario para almacenar materiales originales por renderer
     private Dictionary<Renderer, Material[]> materialesOriginales = new Dictionary<Renderer, Material[]>();
-    // HashSet para almacenar objetos actualmente transparentes
-    private HashSet<GameObject> objetosTransparentes = new HashSet<GameObject>();
+    // Diccionario: pared -> lista de renderers que se transparentaron
+    private Dictionary<GameObject, List<Renderer>> rendersPorPared = new Dictionary<GameObject, List<Renderer>>();
     // Diccionario para rastrear tiempo desde que dejó de bloquear
     private Dictionary<GameObject, float> tiemposSinBloquear = new Dictionary<GameObject, float>();
-    // Diccionario para almacenar layers originales
-    private Dictionary<GameObject, int> layersOriginales = new Dictionary<GameObject, int>();
 
     void Update()
     {
@@ -88,129 +86,103 @@ public class TransparentarParedes : MonoBehaviour
                 if (esPuerta)
                 {
                     // Restaurar puerta inmediatamente si estaba transparente
-                    if (objetosTransparentes.Contains(obj))
+                    if (rendersPorPared.ContainsKey(obj))
                     {
                         RestaurarOpacidad(obj);
-                        objetosTransparentes.Remove(obj);
                     }
                     // No agregar a bloqueantes
                 }
-                else
+                // SOLO procesar si el objeto detectado ES UNA PARED (layer ObjetosTransparentes)
+                else if (obj.layer == LayerMask.NameToLayer("ObjetosTransparentes"))
                 {
-                    // Verificar si el objeto es descendiente del root permitido
-                    bool esDescendiente = false;
-                    if (rootObjetosTransparentes != null)
+                    // Verificar si la pared tiene una puerta cerrada
+                    if (!TienePuertaCerrada(obj))
                     {
-                        Transform current = obj.transform;
-                        while (current != null)
-                        {
-                            if (current.gameObject == rootObjetosTransparentes)
-                            {
-                                esDescendiente = true;
-                                break;
-                            }
-                            current = current.parent;
-                        }
-                    }
-                    else
-                    {
-                        // Si no hay root especificado, permitir todos
-                        esDescendiente = true;
-                    }
-                    
-                    if (esDescendiente)
-                    {
-                        // Si el objeto no tiene renderer, buscar en el padre
-                        if (obj.GetComponent<Renderer>() == null && obj.transform.parent != null)
-                        {
-                            obj = obj.transform.parent.gameObject;
-                        }
-                        
+                        // Transparentar toda la pared con todos sus hijos y nietos
                         objetosBloqueando.Add(obj);
                     }
+                    else if (rendersPorPared.ContainsKey(obj))
+                    {
+                        // Si tiene puerta cerrada, restaurar si estaba transparente
+                        RestaurarOpacidad(obj);
+                    }
                 }
+                // Si NO es una pared (libro, ventana, etc.), IGNORAR completamente
             }
         }
 
         // Manejar histéresis: actualizar timers
-        List<GameObject> objetosARestaurar = new List<GameObject>();
-        foreach (GameObject obj in objetosTransparentes)
+        List<GameObject> paredesARestaurar = new List<GameObject>();
+        foreach (GameObject pared in rendersPorPared.Keys)
         {
-            if (!objetosBloqueando.Contains(obj))
+            if (!objetosBloqueando.Contains(pared))
             {
                 // Incrementar tiempo sin bloquear
-                if (!tiemposSinBloquear.ContainsKey(obj))
+                if (!tiemposSinBloquear.ContainsKey(pared))
                 {
-                    tiemposSinBloquear[obj] = 0f;
+                    tiemposSinBloquear[pared] = 0f;
                 }
                 
-                tiemposSinBloquear[obj] += Time.deltaTime;
+                tiemposSinBloquear[pared] += Time.deltaTime;
                 
                 // Si ya pasó suficiente tiempo, restaurar
-                if (tiemposSinBloquear[obj] >= tiempoEsperaRestaurar)
+                if (tiemposSinBloquear[pared] >= tiempoEsperaRestaurar)
                 {
-                    objetosARestaurar.Add(obj);
+                    paredesARestaurar.Add(pared);
                 }
             }
             else
             {
                 // Sigue bloqueando, resetear timer
-                if (tiemposSinBloquear.ContainsKey(obj))
-                {
-                    tiemposSinBloquear.Remove(obj);
-                }
+                tiemposSinBloquear.Remove(pared);
             }
         }
         
-        // Restaurar objetos que cumplieron el tiempo de espera
-        foreach (GameObject obj in objetosARestaurar)
+        // Restaurar paredes que cumplieron el tiempo de espera
+        foreach (GameObject pared in paredesARestaurar)
         {
-            RestaurarOpacidad(obj);
-            objetosTransparentes.Remove(obj);
-            tiemposSinBloquear.Remove(obj);
+            RestaurarOpacidad(pared);
+            tiemposSinBloquear.Remove(pared);
         }
 
-        // Hacer transparentes todos los objetos bloqueantes
-        foreach (GameObject obj in objetosBloqueando)
+        // Hacer transparentes todas las paredes bloqueantes
+        foreach (GameObject pared in objetosBloqueando)
         {
-            if (!objetosTransparentes.Contains(obj))
+            if (!rendersPorPared.ContainsKey(pared))
             {
-                HacerTransparente(obj);
-                objetosTransparentes.Add(obj);
+                HacerTransparente(pared);
             }
         }
     }
 
-    void HacerTransparente(GameObject obj)
+    void HacerTransparente(GameObject pared)
     {
-        Renderer[] renderers = obj.GetComponentsInChildren<Renderer>();
+        // Obtener TODOS los renderers de la pared y sus hijos
+        Renderer[] renderers = pared.GetComponentsInChildren<Renderer>(includeInactive: false);
+        
+        // Crear lista para guardar qué renderers procesamos
+        rendersPorPared[pared] = new List<Renderer>();
 
         foreach (Renderer renderer in renderers)
         {
-            if (!materialesOriginales.ContainsKey(renderer))
-            {
-                // Guardar materiales originales
-                materialesOriginales[renderer] = renderer.materials;
-            }
+            // Guardar materiales originales
+            materialesOriginales[renderer] = renderer.materials;
+            rendersPorPared[pared].Add(renderer);
 
+            // Crear materiales transparentes
             Material[] materiales = renderer.materials;
             for (int i = 0; i < materiales.Length; i++)
             {
-                // Crear instancia del material si es compartido
-                if (materiales[i].GetInstanceID() == renderer.sharedMaterials[i].GetInstanceID())
-                {
-                    materiales[i] = new Material(materiales[i]);
-                }
+                // Crear instancia del material
+                materiales[i] = new Material(materiales[i]);
 
                 // Configurar transparencia para URP
-                materiales[i].SetFloat("_Surface", 1); // Transparent
-                materiales[i].SetFloat("_Blend", 0); // Alpha
+                materiales[i].SetFloat("_Surface", 1);
+                materiales[i].SetFloat("_Blend", 0);
                 materiales[i].SetFloat("_SrcBlend", (float)UnityEngine.Rendering.BlendMode.SrcAlpha);
                 materiales[i].SetFloat("_DstBlend", (float)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
                 materiales[i].SetFloat("_ZWrite", 0);
                 materiales[i].renderQueue = 3000;
-
-                // Activar keywords para transparencia
                 materiales[i].EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
                 materiales[i].EnableKeyword("_ALPHAPREMULTIPLY_ON");
 
@@ -221,52 +193,36 @@ public class TransparentarParedes : MonoBehaviour
             }
             renderer.materials = materiales;
         }
-        
-        // Guardar y cambiar layer
-        if (!layersOriginales.ContainsKey(obj))
-        {
-            layersOriginales[obj] = obj.layer;
-        }
-        obj.layer = LayerMask.NameToLayer("ObjetosTransparentes");
     }
 
-    void RestaurarOpacidad(GameObject obj)
+    void RestaurarOpacidad(GameObject pared)
     {
-        if (obj == null) return;
+        if (pared == null || !rendersPorPared.ContainsKey(pared)) return;
 
-        Renderer[] renderers = obj.GetComponentsInChildren<Renderer>();
-
-        foreach (Renderer renderer in renderers)
+        // Restaurar materiales de todos los renderers
+        foreach (Renderer renderer in rendersPorPared[pared])
         {
-            if (materialesOriginales.ContainsKey(renderer))
+            if (renderer != null && materialesOriginales.ContainsKey(renderer))
             {
                 renderer.materials = materialesOriginales[renderer];
                 materialesOriginales.Remove(renderer);
             }
         }
-
-        // Restaurar layer original
-        if (layersOriginales.ContainsKey(obj))
-        {
-            obj.layer = layersOriginales[obj];
-            layersOriginales.Remove(obj);
-        }
+        rendersPorPared.Remove(pared);
     }
 
     void RestaurarTodasLasParedes()
     {
-        // Restaurar todos los objetos transparentes inmediatamente
-        List<GameObject> todosLosObjetos = new List<GameObject>(objetosTransparentes);
+        // Restaurar todas las paredes transparentes
+        List<GameObject> paredes = new List<GameObject>(rendersPorPared.Keys);
         
-        foreach (GameObject obj in todosLosObjetos)
+        foreach (GameObject pared in paredes)
         {
-            RestaurarOpacidad(obj);
+            RestaurarOpacidad(pared);
         }
         
-        // Limpiar todas las colecciones
-        objetosTransparentes.Clear();
+        // Limpiar colecciones
         tiemposSinBloquear.Clear();
-        layersOriginales.Clear();
     }
 
     void OnDrawGizmos()
@@ -293,6 +249,55 @@ public class TransparentarParedes : MonoBehaviour
                        posPies + Vector3.up * (alturaCapsule * 0.5f));
     }
 
+    /// <summary>
+    /// Busca el ancestro (padre, abuelo, etc.) que tiene el layer ObjetosTransparentes
+    /// Este será la PARED completa que se transparentará con todos sus hijos
+    /// </summary>
+    GameObject EncontrarParedAncestro(GameObject obj)
+    {
+        int layerObjetosTransparentesId = LayerMask.NameToLayer("ObjetosTransparentes");
+        
+        Transform current = obj.transform;
+        
+        // Subir por la jerarquía hasta encontrar el objeto con layer ObjetosTransparentes
+        while (current != null)
+        {
+            if (current.gameObject.layer == layerObjetosTransparentesId)
+            {
+                return current.gameObject;
+            }
+            current = current.parent;
+        }
+        
+        // Si no encontramos ningún ancestro con ese layer, el objeto mismo podría tenerlo
+        if (obj.layer == layerObjetosTransparentesId)
+        {
+            return obj;
+        }
+        
+        return null;
+    }
+    
+    /// <summary>
+    /// Verifica si el objeto o sus hijos tienen una puerta cerrada
+    /// </summary>
+    bool TienePuertaCerrada(GameObject obj)
+    {
+        // Buscar DoorTrigger en el objeto y sus hijos
+        DoorTrigger[] puertas = obj.GetComponentsInChildren<DoorTrigger>();
+        
+        foreach (DoorTrigger puerta in puertas)
+        {
+            // Si la puerta NO está abierta, la pared no debe transparentarse
+            if (!puerta.IsDoorOpen())
+            {
+                return true;
+            }
+        }
+        
+        return false;
+    }
+    
     void DrawWireCapsule(Vector3 point1, Vector3 point2, float radius)
     {
         // Esferas en los extremos

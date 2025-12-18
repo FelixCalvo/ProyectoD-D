@@ -73,8 +73,8 @@ public class DoorTrigger : NetworkBehaviour
             OpenDoor();
         }
         
-        // Sincronizar el estado de la puerta en todos los clientes
-        if (IsOpen && !hasBeenOpened)
+        // Sincronizar el estado de la puerta en todos los clientes (solo en multiplayer)
+        if (Object != null && Object.IsValid && IsOpen && !hasBeenOpened)
         {
             ApplyDoorOpenState();
         }
@@ -111,7 +111,7 @@ public class DoorTrigger : NetworkBehaviour
         }
 
         // Marcar como abierta en la red (se sincroniza automáticamente)
-        if (Object != null && Object.HasStateAuthority)
+        if (Object != null && Object.IsValid && Object.HasStateAuthority)
         {
             IsOpen = true;
             Debug.Log($"[{gameObject.name}] 🚪 Puerta abierta por jugador con autoridad");
@@ -149,6 +149,23 @@ public class DoorTrigger : NetworkBehaviour
     public void TryOpen()
     {
         OpenDoor();
+    }
+    
+    /// <summary>
+    /// Verifica si la puerta está abierta (para TransparentarParedes)
+    /// </summary>
+    public bool IsDoorOpen()
+    {
+        // Verificar estado local primero
+        if (hasBeenOpened) return true;
+        
+        // En multiplayer, verificar estado sincronizado
+        if (Object != null && Object.IsValid)
+        {
+            return IsOpen;
+        }
+        
+        return false;
     }
     
     private void DisableBlocker()

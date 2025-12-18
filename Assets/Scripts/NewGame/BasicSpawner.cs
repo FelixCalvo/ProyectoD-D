@@ -139,8 +139,9 @@ public class BasicSpawner : MonoBehaviour, INetworkRunnerCallbacks
             
             Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
             
-            // Intentar detectar jugador enemigo
-            if (Physics.Raycast(ray, out RaycastHit hitPlayer, 1000f, LayerMask.GetMask("Player")))
+            // Intentar detectar jugador enemigo (ignorar paredes transparentes)
+            int layerMaskPlayer = LayerMask.GetMask("Player");
+            if (Physics.Raycast(ray, out RaycastHit hitPlayer, 1000f, layerMaskPlayer))
             {
                 Player targetPlayer = hitPlayer.collider.GetComponent<Player>();
                 if (targetPlayer != null && targetPlayer.Object != null)
@@ -152,7 +153,7 @@ public class BasicSpawner : MonoBehaviour, INetworkRunnerCallbacks
                 }
             }
             // Si no hay jugador, intentar detectar suelo
-            else if (Physics.Raycast(ray, out RaycastHit hitGround, 1000f, LayerMask.GetMask("Ground")))
+            else if (Physics.Raycast(ray, out RaycastHit hitGround, 1000f))
             {
                 _hasPendingClick = true;
                 _isPendingAttack = false;
