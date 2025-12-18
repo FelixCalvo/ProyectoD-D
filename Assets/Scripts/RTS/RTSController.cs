@@ -429,7 +429,7 @@ public class RTSController : MonoBehaviour
         }
         
         ShowDestinationMarker(destination);
-        Debug.Log($"{_selectedUnits.Count} unidades moviéndose a {destination}");
+        //Debug.Log($"{_selectedUnits.Count} unidades moviéndose a {destination}");
     }
     
     /// <summary>

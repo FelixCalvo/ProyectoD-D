@@ -16,13 +16,20 @@ public class RTSUnitAvoidance : MonoBehaviour
     [SerializeField] private float blockedTimeThreshold = 1f;
     
     [Tooltip("Tiempo de espera cuando se detecta bloqueo")]
-    [SerializeField] private float waitTime = 2f;
+    [SerializeField] private float waitTime = 1f;
+    
+    [Tooltip("Tiempo mínimo de espera incluso para priority 0")]
+    [SerializeField] private float minWaitTime = 0.3f;
+    
+    [Tooltip("Distancia extra para considerar que llegó al destino")]
+    [SerializeField] private float arrivalTolerance = 0.2f;
     
     private NavMeshAgent agent;
     private float blockedTimer = 0f;
     private float waitTimer = 0f;
     private bool isWaiting = false;
     private Vector3 lastDestination;
+    private Vector3 previousDestination;
     
     void Awake()
     {
@@ -31,44 +38,87 @@ public class RTSUnitAvoidance : MonoBehaviour
     
     void Update()
     {
-        // Si está esperando, contar tiempo
+        // DETECTAR NUEVO DESTINO INMEDIATAMENTE (incluso si está parado o esperando)
+        if (agent.hasPath)
+        {
+            Vector3 currentDestination = agent.destination;
+            
+            // Si el destino cambió significativamente
+            if (Vector3.Distance(currentDestination, previousDestination) > 0.5f)
+            {
+                // Reactivar agente inmediatamente
+                if (agent.isStopped)
+                {
+                    agent.isStopped = false;
+                    Debug.Log($"{gameObject.name} nuevo destino, reactivando agente");
+                }
+                
+                // Cancelar espera si estaba esperando
+                if (isWaiting)
+                {
+                    isWaiting = false;
+                    Debug.Log($"{gameObject.name} nuevo destino, cancelando espera");
+                }
+                
+                previousDestination = currentDestination;
+                lastDestination = currentDestination;
+                blockedTimer = 0f;
+            }
+        }
+        
+        // Si está esperando, solo contar tiempo
         if (isWaiting)
         {
             waitTimer -= Time.deltaTime;
             
             if (waitTimer <= 0f)
             {
-                // Reiniciar movimiento
                 ResumeMovement();
             }
             return;
         }
         
-        // Si no tiene destino o está parado intencionalmente, resetear
-        if (!agent.hasPath || agent.isStopped)
+        // Si no tiene destino, resetear
+        if (!agent.hasPath)
+        {
+            blockedTimer = 0f;
+            previousDestination = Vector3.zero;
+            return;
+        }
+        
+        // Verificar si ya llegó al destino
+        float distanceToDestination = agent.remainingDistance;
+        bool hasArrived = distanceToDestination <= (agent.stoppingDistance + arrivalTolerance);
+        
+        // Si llegó al destino, detener completamente
+        if (hasArrived && !agent.isStopped)
+        {
+            agent.isStopped = true;
+            blockedTimer = 0f;
+            return;
+        }
+        
+        // Si está parado intencionalmente (ya llegó), no hacer más
+        if (agent.isStopped && hasArrived)
         {
             blockedTimer = 0f;
             return;
         }
         
         // Detectar si está bloqueada (velocidad muy baja pero debería moverse)
-        if (agent.velocity.magnitude < blockedThreshold && agent.remainingDistance > agent.stoppingDistance)
+        if (agent.velocity.magnitude < blockedThreshold && !hasArrived)
         {
             blockedTimer += Time.deltaTime;
             
             // Si lleva bloqueada suficiente tiempo
             if (blockedTimer >= blockedTimeThreshold)
             {
-                // Las unidades con priority más alta (valor más bajo) esperan menos
-                // Priority 0 = no espera, Priority 50 = espera completo
-                float priorityFactor = agent.avoidancePriority / 100f;
+                // Calcular tiempo de espera basado en prioridad
+                // Priority 0 = minWaitTime, Priority 50+ = waitTime completo
+                float priorityFactor = Mathf.Clamp01(agent.avoidancePriority / 100f);
+                float calculatedWait = Mathf.Lerp(minWaitTime, waitTime, priorityFactor);
                 
-                // Solo esperar si no es la prioridad más alta
-                if (agent.avoidancePriority > 0)
-                {
-                    StartWaiting(waitTime * priorityFactor);
-                }
-                
+                StartWaiting(calculatedWait);
                 blockedTimer = 0f;
             }
         }
