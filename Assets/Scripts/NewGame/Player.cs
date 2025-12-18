@@ -1,6 +1,7 @@
 using Fusion;
 using UnityEngine;
 using UnityEngine.AI;
+using Unity.Cinemachine;
 
 /// <summary>
 /// Controlador del personaje jugador en red usando Photon Fusion + NavMesh + Sistema de Combate RTS.
@@ -17,6 +18,7 @@ public class Player : NetworkBehaviour
   private Vector3 _visualModelOriginalLocalPosition;
   
   // ===== VARIABLES DE RED (sincronizadas automáticamente) =====
+  [Networked] public NetworkBool IsPlayerConnected { get; set; } // Si hay un jugador controlando este personaje
   [Networked] private NetworkBool IsWalking { get; set; }
   [Networked] private Vector3 MoveDirection { get; set; }
   [Networked] private Vector3 TargetPosition { get; set; } // Destino de movimiento sincronizado
@@ -50,6 +52,7 @@ public class Player : NetworkBehaviour
   private float _rangedAnimationDuration = 1f;
   private bool _isUsingRangedAttack = false;
   private int _framesSinceDestinationSet = 999; // Contador para evitar limpieza prematura
+  private bool _cameraConfigured = false; // Para configurar cámara solo una vez
   
   // Propiedades calculadas
   private float CurrentAttackRange => _isUsingRangedAttack ? rangedAttackRange : meleeAttackRange;
@@ -173,6 +176,81 @@ public class Player : NetworkBehaviour
     {
       networkTransform.enabled = false;
     }
+    
+    // Inicializar visibilidad basándose en IsPlayerConnected
+    UpdateVisibility();
+  }
+  
+  /// <summary>
+  /// Configura la prioridad de la cámara para el jugador local
+  /// </summary>
+  private void UpdateLocalPlayerCamera()
+  {
+    // Este método se ejecuta en TODOS los clientes y el servidor
+    // Cada uno detecta si tiene InputAuthority y activa su propia cámara
+    
+    bool isLocalPlayer = HasInputAuthority;
+    
+    Debug.Log($"[{name}] 🎥 UpdateLocalPlayerCamera: HasInputAuthority={HasInputAuthority}, HasStateAuthority={HasStateAuthority}, Runner.IsServer={Runner?.IsServer}");
+    
+    // PRIMERO: Desactivar TODAS las cámaras de jugadores en la escena
+    Player[] allPlayers = FindObjectsByType<Player>(FindObjectsSortMode.None);
+    foreach (Player player in allPlayers)
+    {
+      var playerCamera = player.GetComponentInChildren<CinemachineCamera>();
+      if (playerCamera != null)
+      {
+        playerCamera.Priority = 0;
+      }
+    }
+    
+    // SEGUNDO: Activar solo MI cámara
+    var camera = GetComponentInChildren<CinemachineCamera>();
+    if (camera != null)
+    {
+      if (isLocalPlayer)
+      {
+        camera.Priority = 10; // Prioridad alta para jugador local
+        Debug.Log($"[{name}] 📷✅ Cámara activada para jugador LOCAL (Priority=10, camera={camera.name})");
+        
+        // Actualizar HelperClass.ActivePlayer para compatibilidad
+        HelperClass.ActivePlayer = gameObject;
+      }
+      else
+      {
+        camera.Priority = 0; // Prioridad baja para jugadores remotos
+        Debug.Log($"[{name}] 📷❌ Cámara desactivada para jugador REMOTO (Priority=0)");
+      }
+    }
+    else
+    {
+      Debug.LogError($"[{name}] ❌ NO se encontró CinemachineCamera en hijos!");
+    }
+  }
+  
+  /// <summary>
+  /// Actualiza la visibilidad del jugador basándose en si está conectado
+  /// </summary>
+  private void UpdateVisibility()
+  {
+    bool shouldBeVisible = IsPlayerConnected;
+    
+    // Actualizar renderers (visualización)
+    Renderer[] renderers = GetComponentsInChildren<Renderer>();
+    foreach (Renderer renderer in renderers)
+    {
+      renderer.enabled = shouldBeVisible;
+    }
+    
+    // Actualizar colliders (interacción)
+    Collider[] colliders = GetComponents<Collider>();
+    foreach (Collider col in colliders)
+    {
+      col.enabled = shouldBeVisible;
+    }
+    
+    // NO deshabilitamos NavMeshAgent porque puede interferir con la sincronización de posición
+    // El agente permanece activo pero invisible/no-clickeable cuando no está conectado
   }
 
   /// <summary>
@@ -254,7 +332,7 @@ public class Player : NetworkBehaviour
         if (!IsWalking)
         {
           IsWalking = true;
-          Debug.Log($"[{name}] ✓ Caminando (velocity={velocity:F2}, frames={_framesSinceDestinationSet})");
+          //Debug.Log($"[{name}] ✓ Caminando (velocity={velocity:F2}, frames={_framesSinceDestinationSet})");
         }
       }
       else if (velocity < 0.01f)
@@ -262,7 +340,7 @@ public class Player : NetworkBehaviour
         if (IsWalking)
         {
           IsWalking = false;
-          Debug.Log($"[{name}] ⏹ Detenido (velocity={velocity:F2}, frames={_framesSinceDestinationSet})");
+          //Debug.Log($"[{name}] ⏹ Detenido (velocity={velocity:F2}, frames={_framesSinceDestinationSet})");
         }
       }
     }
@@ -274,6 +352,28 @@ public class Player : NetworkBehaviour
   /// </summary>
   public override void Render()
   {
+    // Configurar cámara cuando se asigne InputAuthority (solo una vez la primera vez)
+    if (!_cameraConfigured && (HasInputAuthority || HasStateAuthority))
+    {
+      UpdateLocalPlayerCamera();
+      _cameraConfigured = true;
+    }
+    
+    // CRÍTICO: Forzar prioridad de cámara cada frame en multiplayer
+    // Esto evita que DialogueCameraManager u otros sistemas la cambien
+    if (_cameraConfigured && HasInputAuthority)
+    {
+      var camera = GetComponentInChildren<CinemachineCamera>();
+      if (camera != null && camera.Priority != 10)
+      {
+        camera.Priority = 10;
+        Debug.LogWarning($"[{name}] ⚠️ Restaurando prioridad de cámara a 10 (estaba en {camera.Priority})");
+      }
+    }
+    
+    // Actualizar visibilidad cada frame basándose en el estado sincronizado
+    UpdateVisibility();
+    
     // Sincronizar _currentTarget desde TargetNetworkId en TODOS los clientes
     if (TargetNetworkId > 0 && _currentTarget == null)
     {

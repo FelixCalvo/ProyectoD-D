@@ -46,11 +46,22 @@ public class DialogueCameraManager : MonoBehaviour
 
     void Update()
     {
-        // Solo actualizar cámaras de players si NO hay diálogo activo
-        if (!IsDialogueActive)
+        // MULTIPLAYER: Las cámaras de players se gestionan en Player.UpdateLocalPlayerCamera()
+        // Este manager solo gestiona cámaras de diálogo
+        // Solo actualizar en SINGLEPLAYER (cuando no hay NetworkRunner activo)
+        if (!IsDialogueActive && !IsMultiplayerActive())
         {
             UpdatePlayerCameraPriorities();
         }
+    }
+
+    /// <summary>
+    /// Verifica si estamos en modo multiplayer
+    /// </summary>
+    private bool IsMultiplayerActive()
+    {
+        // Buscar si hay un NetworkRunner activo (indica partida multiplayer)
+        return Fusion.NetworkRunner.Instances.Count > 0;
     }
 
     void UpdatePlayerCameraPriorities()

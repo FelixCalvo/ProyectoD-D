@@ -318,6 +318,47 @@ public class BasicSpawner : MonoBehaviour, INetworkRunnerCallbacks
 
 
     /// <summary>
+    /// Activa la cámara Cinemachine para el jugador local
+    /// </summary>
+    private void ActivatePlayerCamera(GameObject playerGO, PlayerRef player)
+    {
+        // Verificar si este jugador es LOCAL para este cliente:
+        // - En HOST (servidor): el primer jugador (PlayerRef con índice más bajo)
+        // - En CLIENTE: el jugador con InputAuthority asignado
+        
+        bool isLocalPlayer = false;
+        
+        if (_runner.IsServer)
+        {
+            // En el HOST, el jugador local es el primero que se conecta (típicamente PlayerRef con PlayerId=0)
+            // Pero para ser más seguro, comparamos con el LocalPlayer del runner
+            isLocalPlayer = (player == _runner.LocalPlayer);
+        }
+        
+        if (isLocalPlayer)
+        {
+            var camera = playerGO.GetComponentInChildren<Unity.Cinemachine.CinemachineCamera>();
+            if (camera != null)
+            {
+                camera.Priority = 10; // Prioridad alta para jugador local
+                Debug.Log($"[{playerGO.name}] 📷 Cámara activada para jugador LOCAL (Priority=10, PlayerRef={player.PlayerId})");
+                
+                // Actualizar HelperClass.ActivePlayer para compatibilidad
+                HelperClass.ActivePlayer = playerGO;
+            }
+        }
+        else
+        {
+            var camera = playerGO.GetComponentInChildren<Unity.Cinemachine.CinemachineCamera>();
+            if (camera != null)
+            {
+                camera.Priority = 0; // Prioridad baja para jugadores remotos
+                Debug.Log($"[{playerGO.name}] 📷 Cámara desactivada para jugador REMOTO (Priority=0, PlayerRef={player.PlayerId})");
+            }
+        }
+    }
+    
+    /// <summary>
     /// Valida que los jugadores pre-colocados estén configurados correctamente
     /// </summary>
     private void ValidatePreplacedPlayers()
@@ -337,28 +378,69 @@ public class BasicSpawner : MonoBehaviour, INetworkRunnerCallbacks
                 continue;
             }
             
-            // Asegurar que empiezan desactivados
-            if (preplacedPlayers[i].activeSelf)
+            // IMPORTANTE: Los GameObjects deben estar ACTIVOS para que Fusion los replique
+            if (!preplacedPlayers[i].activeSelf)
             {
-                Debug.LogWarning($"⚠️ {preplacedPlayers[i].name} estaba activo, desactivándolo para multiplayer");
-                preplacedPlayers[i].SetActive(false);
+                Debug.LogWarning($"⚠️ {preplacedPlayers[i].name} estaba inactivo, activándolo para replicación");
+                preplacedPlayers[i].SetActive(true);
             }
             
-            Debug.Log($"✅ Jugador {i}: {preplacedPlayers[i].name} configurado correctamente");
+            // Marcar como desconectado inicialmente (si tiene Player script)
+            Player playerScript = preplacedPlayers[i].GetComponent<Player>();
+            if (playerScript != null)
+            {
+                // Nota: IsPlayerConnected se inicializa en false por defecto en NetworkBool
+                Debug.Log($"✅ Jugador {i}: {preplacedPlayers[i].name} configurado (IsPlayerConnected = false por defecto)");
+            }
+            else
+            {
+                Debug.LogWarning($"⚠️ {preplacedPlayers[i].name} no tiene componente Player!");
+            }
         }
     }
+    
+
     
     /// <summary>
     /// Activa un GameObject de jugador pre-colocado cuando un jugador se conecta
     /// </summary>
     private async void ActivatePlayer(PlayerRef player)
     {
+        Debug.Log($"🎮 ActivatePlayer iniciado para PlayerRef {player.PlayerId}");
+        
+        // Esperar a que el userName esté registrado (máximo 3 segundos)
+        string userName = null;
+        int intentos = 0;
+        const int maxIntentos = 30; // 30 intentos x 100ms = 3 segundos
+        
+        while (intentos < maxIntentos)
+        {
+            if (PlayerUserNameRegistry.Instance != null)
+            {
+                userName = PlayerUserNameRegistry.Instance.GetUserName(player);
+                if (!string.IsNullOrEmpty(userName))
+                {
+                    Debug.Log($"✅ UserName encontrado: {userName} (intento {intentos + 1})");
+                    break;
+                }
+            }
+            
+            intentos++;
+            await System.Threading.Tasks.Task.Delay(100);
+        }
+        
+        if (string.IsNullOrEmpty(userName))
+        {
+            userName = $"Player{player.PlayerId}";
+            Debug.LogWarning($"⚠️ No se encontró userName para PlayerRef {player.PlayerId}, usando fallback: {userName}");
+        }
+        
         // Determinar el índice del jugador (0-3)
         int playerIndex = GetPlayerIndex(player);
         
         if (playerIndex < 0 || playerIndex >= preplacedPlayers.Length)
         {
-            Debug.LogError($"❌ PlayerIndex {playerIndex} fuera de rango!");
+            Debug.LogError($"❌ PlayerIndex {playerIndex} fuera de rango para {userName}!");
             return;
         }
         
@@ -370,11 +452,10 @@ public class BasicSpawner : MonoBehaviour, INetworkRunnerCallbacks
             return;
         }
         
-        // Obtener nombre de usuario y personaje seleccionado
-        string userName = PlayerUserNameRegistry.Instance?.GetUserName(player) ?? $"Player{player.PlayerId}";
+        // Obtener personaje seleccionado
         string characterName = PlayerCharacterSelection.GetSelection(userName);
         
-        Debug.Log($"🎮 Activando {playerGO.name} para {userName} (personaje: {characterName})");
+        Debug.Log($"🎮 Activando {playerGO.name} (índice {playerIndex}) para {userName} (personaje: {characterName})");
         
         // Obtener NetworkObject
         NetworkObject netObj = playerGO.GetComponent<NetworkObject>();
@@ -384,11 +465,15 @@ public class BasicSpawner : MonoBehaviour, INetworkRunnerCallbacks
             return;
         }
         
-        // IMPORTANTE: Activar el GameObject
-        // Fusion lo detectará automáticamente y lo registrará como Scene Object
-        playerGO.SetActive(true);
+        // Obtener Player script
+        Player playerScript = playerGO.GetComponent<Player>();
+        if (playerScript == null)
+        {
+            Debug.LogError($"❌ {playerGO.name} no tiene componente Player!");
+            return;
+        }
         
-        // Esperar un frame para que Fusion procese el objeto de escena
+        // Esperar un frame para que todo se inicialice
         await System.Threading.Tasks.Task.Delay(100);
         
         // Asignar InputAuthority (el objeto ya está spawneado por Fusion como Scene Object)
@@ -396,6 +481,10 @@ public class BasicSpawner : MonoBehaviour, INetworkRunnerCallbacks
         {
             netObj.AssignInputAuthority(player);
             Debug.Log($"✅ InputAuthority asignada a {userName} en {playerGO.name}");
+            
+            // Marcar como conectado - esto se sincronizará automáticamente a todos los clientes
+            playerScript.IsPlayerConnected = true;
+            Debug.Log($"✅ IsPlayerConnected = true para {playerGO.name}");
         }
         else if (netObj.HasStateAuthority == false)
         {
@@ -405,7 +494,7 @@ public class BasicSpawner : MonoBehaviour, INetworkRunnerCallbacks
         // Registrar el mapeo
         _activePlayerMappings[player] = playerGO;
         
-        Debug.Log($"✅ {userName} activado en {playerGO.name}");
+        Debug.Log($"✅ {userName} activado y visible en {playerGO.name}");
     }
     
     /// <summary>
@@ -414,52 +503,88 @@ public class BasicSpawner : MonoBehaviour, INetworkRunnerCallbacks
     /// </summary>
     private int GetPlayerIndex(PlayerRef player)
     {
-        // Opción 1: Usar PlayerId directamente (primera conexión = índice 0, etc.)
-        // return player.PlayerId - 1;
-        
-        // Opción 2: Usar selección de personaje (buscar el primer slot disponible que coincida)
         string userName = PlayerUserNameRegistry.Instance?.GetUserName(player);
         string characterName = PlayerCharacterSelection.GetSelection(userName);
         
+        Debug.Log($"🔍 GetPlayerIndex para PlayerRef {player.PlayerId}: userName={userName}, character={characterName}");
+        
         // Buscar jugador pre-colocado que coincida con el personaje
-        for (int i = 0; i < preplacedPlayers.Length; i++)
+        if (!string.IsNullOrEmpty(characterName))
         {
-            if (preplacedPlayers[i] == null) continue;
-            
-            // Si el jugador ya está activo, saltarlo
-            if (_activePlayerMappings.ContainsValue(preplacedPlayers[i])) continue;
-            
-            string playerName = preplacedPlayers[i].name;
-            
-            // Matching simple por nombre
-            if (!string.IsNullOrEmpty(characterName))
+            for (int i = 0; i < preplacedPlayers.Length; i++)
             {
-                if (characterName.Contains("Paladin") && playerName.Contains("Paladin")) return i;
-                if (characterName.Contains("Bruja") && playerName.Contains("Bruja")) return i;
-                if (characterName.Contains("Arquera") && playerName.Contains("Arquera")) return i;
-                if (characterName.Contains("Cirujano") && playerName.Contains("Cirujano")) return i;
+                if (preplacedPlayers[i] == null) continue;
+                
+                // Si el jugador ya está activo, saltarlo
+                if (_activePlayerMappings.ContainsValue(preplacedPlayers[i]))
+                {
+                    Debug.Log($"   Slot {i} ({preplacedPlayers[i].name}) ya está ocupado, saltando");
+                    continue;
+                }
+                
+                string playerName = preplacedPlayers[i].name;
+                
+                // Matching simple por nombre
+                if (characterName.Contains("Paladin") && playerName.Contains("Paladin"))
+                {
+                    Debug.Log($"✅ Match encontrado: {characterName} → slot {i} ({playerName})");
+                    return i;
+                }
+                if (characterName.Contains("Bruja") && playerName.Contains("Bruja"))
+                {
+                    Debug.Log($"✅ Match encontrado: {characterName} → slot {i} ({playerName})");
+                    return i;
+                }
+                if (characterName.Contains("Arquera") && playerName.Contains("Arquera"))
+                {
+                    Debug.Log($"✅ Match encontrado: {characterName} → slot {i} ({playerName})");
+                    return i;
+                }
+                if (characterName.Contains("Cirujano") && playerName.Contains("Cirujano"))
+                {
+                    Debug.Log($"✅ Match encontrado: {characterName} → slot {i} ({playerName})");
+                    return i;
+                }
             }
         }
         
         // Fallback: usar primer slot disponible
+        Debug.LogWarning($"⚠️ No se encontró match para '{characterName}', buscando primer slot disponible...");
         for (int i = 0; i < preplacedPlayers.Length; i++)
         {
+            if (preplacedPlayers[i] == null)
+            {
+                Debug.LogWarning($"   Slot {i} es null, saltando");
+                continue;
+            }
+            
             if (!_activePlayerMappings.ContainsValue(preplacedPlayers[i]))
             {
-                Debug.LogWarning($"⚠️ No se encontró match para {characterName}, usando slot {i}");
+                Debug.LogWarning($"✅ Usando slot {i} ({preplacedPlayers[i].name}) como fallback");
                 return i;
+            }
+            else
+            {
+                Debug.LogWarning($"   Slot {i} ({preplacedPlayers[i].name}) ya está ocupado");
             }
         }
         
-        Debug.LogError($"❌ No hay slots disponibles!");
+        Debug.LogError($"❌ No hay slots disponibles! Total slots: {preplacedPlayers.Length}, Activos: {_activePlayerMappings.Count}");
         return -1;
     }
     
     public void OnPlayerJoined(NetworkRunner runner, PlayerRef player)
     {
+        Debug.Log($"🎮 OnPlayerJoined llamado: PlayerRef={player.PlayerId}, IsServer={runner.IsServer}");
+        
         if (runner.IsServer)
         {
+            Debug.Log($"🎮 Server activando jugador {player.PlayerId}...");
             ActivatePlayer(player);
+        }
+        else
+        {
+            Debug.Log($"🎮 Cliente detectó nuevo jugador {player.PlayerId}, el servidor lo activará");
         }
     }
 
@@ -469,19 +594,28 @@ public class BasicSpawner : MonoBehaviour, INetworkRunnerCallbacks
         {
             Debug.Log($"🔴 {playerGO.name} desconectado");
             
-            // Obtener NetworkObject y despawnear
+            // Obtener Player script
+            Player playerScript = playerGO.GetComponent<Player>();
+            if (playerScript != null && runner.IsServer)
+            {
+                // Marcar como desconectado - esto se sincronizará automáticamente a todos los clientes
+                playerScript.IsPlayerConnected = false;
+                Debug.Log($"✅ IsPlayerConnected = false para {playerGO.name}");
+            }
+            
+            // Obtener NetworkObject
             NetworkObject netObj = playerGO.GetComponent<NetworkObject>();
             if (netObj != null && runner.IsServer)
             {
-                runner.Despawn(netObj);
-                Debug.Log($"✅ NetworkObject despawneado");
+                // Remover InputAuthority
+                netObj.RemoveInputAuthority();
+                Debug.Log($"✅ InputAuthority removida de {playerGO.name}");
             }
-            
-            // Desactivar el GameObject
-            playerGO.SetActive(false);
             
             // Remover del mapeo
             _activePlayerMappings.Remove(player);
+            
+            Debug.Log($"✅ {playerGO.name} desconectado correctamente");
         }
     }
 

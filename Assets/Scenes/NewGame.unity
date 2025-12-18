@@ -1442,7 +1442,7 @@ Camera:
     height: 1
   near clip plane: 0.3
   far clip plane: 1000
-  field of view: 60.000004
+  field of view: 47.9
   orthographic: 0
   orthographic size: 5
   m_Depth: -1
@@ -1468,8 +1468,8 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 61676742}
   serializedVersion: 2
-  m_LocalRotation: {x: 0, y: -0.7083398, z: 0, w: 0.70587164}
-  m_LocalPosition: {x: 12.529937, y: 1.54, z: 17.704933}
+  m_LocalRotation: {x: 0.15815942, y: -0.73245054, z: 0.18194163, w: 0.6367095}
+  m_LocalPosition: {x: 42.22799, y: 5.3092957, z: 29.639965}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -2055,6 +2055,10 @@ PrefabInstance:
     - target: {fileID: 4066155289438490717, guid: 80666178df469f14688090ca83f65e16, type: 3}
       propertyPath: m_Name
       value: Arquera
+      objectReference: {fileID: 0}
+    - target: {fileID: 4066155289438490717, guid: 80666178df469f14688090ca83f65e16, type: 3}
+      propertyPath: m_IsActive
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 4869981677836103185, guid: 80666178df469f14688090ca83f65e16, type: 3}
       propertyPath: rootObjetosTransparentes
@@ -30781,6 +30785,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: Cirujano Barbero
       objectReference: {fileID: 0}
+    - target: {fileID: 8458709193966048763, guid: 0542d6f9232f59e4f8fc2b4cf1084efd, type: 3}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -38510,7 +38518,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 7664401591604902865, guid: 2fa079f4f9ca61742b2fa0e0a8e8adc9, type: 3}
       propertyPath: m_IsActive
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 8409242645945382316, guid: 2fa079f4f9ca61742b2fa0e0a8e8adc9, type: 3}
       propertyPath: rootObjetosTransparentes
@@ -40095,7 +40103,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 7624009864611349345, guid: c5c020fd96216c544957d9359e39424f, type: 3}
       propertyPath: m_IsActive
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []

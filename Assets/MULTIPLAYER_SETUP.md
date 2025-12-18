@@ -32,7 +32,9 @@ NewGame (Scene)
 ```
 
 **IMPORTANTE:**
-- ✅ Los 4 jugadores deben estar **DESACTIVADOS** en la escena (checkbox desactivado)
+- ✅ Los 4 jugadores deben estar **ACTIVOS** en la escena (checkbox activado)
+  - Esto es necesario para que Fusion los replique correctamente a todos los clientes
+  - `BasicSpawner` deshabilitará automáticamente los componentes hasta que un jugador se conecte
 - ✅ Cada uno debe tener **NetworkObject** configurado así:
   - `Allow State Authority`: ✅ Activado
   - `Destroy When State Authority Leaves`: ❌ Desactivado (para no destruirlo al desconectar)
@@ -42,9 +44,15 @@ NewGame (Scene)
 - ✅ Las posiciones en la escena son donde aparecerán al conectarse
 
 **NOTA:** Los NetworkObjects en la escena son automáticamente registrados por Fusion cuando:
-1. El GameObject está activo
+1. El GameObject está activo (desde el inicio de la escena)
 2. El NetworkRunner está ejecutándose
-Por eso solo necesitamos activarlos y asignar InputAuthority, NO spawnerlos manualmente.
+
+Por eso los GameObjects SIEMPRE están activos, pero `BasicSpawner`:
+- **Deshabilita componentes** (NavMeshAgent, Player, RTSUnit, Animator) cuando no hay jugador conectado
+- **Habilita componentes** cuando un jugador se conecta
+- **Asigna InputAuthority** para dar control al jugador
+
+Esto permite que Fusion replique los objetos a todos los clientes correctamente.
 
 ---
 
