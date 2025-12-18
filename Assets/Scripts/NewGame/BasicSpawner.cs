@@ -139,26 +139,58 @@ public class BasicSpawner : MonoBehaviour, INetworkRunnerCallbacks
             
             Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
             
-            // Intentar detectar jugador enemigo (ignorar paredes transparentes)
-            int layerMaskPlayer = LayerMask.GetMask("Player");
-            if (Physics.Raycast(ray, out RaycastHit hitPlayer, 1000f, layerMaskPlayer))
+            // Usar RaycastAll para atravesar paredes transparentes
+            RaycastHit[] allHits = Physics.RaycastAll(ray, 1000f);
+            System.Array.Sort(allHits, (a, b) => a.distance.CompareTo(b.distance));
+            
+            RaycastHit playerHit = default;
+            RaycastHit groundHit = default;
+            bool hitPlayer = false;
+            bool hitGround = false;
+            
+            foreach (RaycastHit hit in allHits)
             {
-                Player targetPlayer = hitPlayer.collider.GetComponent<Player>();
-                if (targetPlayer != null && targetPlayer.Object != null)
+                // Ignorar paredes transparentes
+                if (hit.collider.gameObject.layer == LayerMask.NameToLayer("ObjetosTransparentes"))
+                    continue;
+                
+                // Detectar jugador enemigo
+                if (!hitPlayer && hit.collider.gameObject.layer == LayerMask.NameToLayer("Player"))
                 {
-                    _hasPendingClick = true;
-                    _isPendingAttack = true;
-                    _pendingTargetPlayerId = (int)targetPlayer.Object.Id.Raw;
-                    Debug.Log($"[Input] ✓ Ataque almacenado → {hitPlayer.collider.name}");
+                    Player targetPlayer = hit.collider.GetComponent<Player>();
+                    if (targetPlayer != null && targetPlayer.Object != null)
+                    {
+                        playerHit = hit;
+                        hitPlayer = true;
+                    }
                 }
+                
+                // Detectar suelo - SOLO layer "Ground"
+                if (!hitGround && LayerMask.LayerToName(hit.collider.gameObject.layer) == "Ground")
+                {
+                    groundHit = hit;
+                    hitGround = true;
+                }
+                
+                if (hitPlayer && hitGround)
+                    break;
             }
-            // Si no hay jugador, intentar detectar suelo
-            else if (Physics.Raycast(ray, out RaycastHit hitGround, 1000f))
+            
+            // Prioridad: atacar jugador
+            if (hitPlayer)
+            {
+                _hasPendingClick = true;
+                _isPendingAttack = true;
+                _pendingTargetPlayerId = (int)((Player)playerHit.collider.GetComponent<Player>()).Object.Id.Raw;
+                Debug.Log($"[Input] ✓ Ataque almacenado → {playerHit.collider.name}");
+            }
+            // Si no, mover al suelo
+            else if (hitGround)
             {
                 _hasPendingClick = true;
                 _isPendingAttack = false;
-                _pendingTargetPosition = hitGround.point;
-                Debug.Log($"[Input] ✓ Movimiento almacenado → {hitGround.point}");
+                _pendingTargetPosition = groundHit.point;
+                Debug.Log($"[Input] ✓ Movimiento almacenado → {groundHit.point}");
             }
             else
             {
