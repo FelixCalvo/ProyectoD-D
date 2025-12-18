@@ -3,7 +3,7 @@ using Unity.Cinemachine;
 
 /// <summary>
 /// Gestiona el cambio de cámaras Cinemachine durante los diálogos y el player activo.
-/// Simplemente cambia la prioridad de las cámaras virtuales.
+/// Funciona tanto para singleplayer como multiplayer usando GameObjects pre-colocados.
 /// </summary>
 public class DialogueCameraManager : MonoBehaviour
 {
@@ -22,8 +22,9 @@ public class DialogueCameraManager : MonoBehaviour
     [SerializeField] private int inactivePlayerCameraPriority = 0;
 
     [Header("Cámaras de Players")]
+    [Tooltip("Asigna los GameObjects de jugadores y sus cámaras Cinemachine")]
     [SerializeField] private PlayerCamera[] playerCameras;
-
+    
     private CinemachineCamera currentDialogueCamera;
     private GameObject lastActivePlayer;
 

@@ -8,19 +8,14 @@ using UnityEngine.SceneManagement;
 
 public class BasicSpawner : MonoBehaviour, INetworkRunnerCallbacks
 {
-    [Header("Network")]
-    [SerializeField] private NetworkPrefabRef _playerPrefab; // Prefab genérico (deprecated)
+    [Header("Jugadores Pre-colocados en Escena")]
+    [Tooltip("Asigna los 4 GameObjects de jugadores en la escena (desactivados por defecto)")]
+    [SerializeField] private GameObject[] preplacedPlayers = new GameObject[4];
     
-    [Header("Prefabs de Personajes")]
-    [SerializeField] private NetworkPrefabRef _paladinPrefab;
-    [SerializeField] private NetworkPrefabRef _brujaPrefab;
-    [SerializeField] private NetworkPrefabRef _arqueraPrefab;
-    [SerializeField] private NetworkPrefabRef _cirujanoBarberoPrefab;
-
     [Header("UI")]
     [SerializeField] private ListaPartidasUI listaPartidasUI;
 
-    private Dictionary<PlayerRef, NetworkObject> _spawnedCharacters = new Dictionary<PlayerRef, NetworkObject>();
+    private Dictionary<PlayerRef, GameObject> _activePlayerMappings = new Dictionary<PlayerRef, GameObject>();
     //public void OnPlayerJoined(NetworkRunner runner, PlayerRef player) { }
     //public void OnPlayerLeft(NetworkRunner runner, PlayerRef player) { }
     //public void OnInput(NetworkRunner runner, NetworkInput input) { }
@@ -57,6 +52,9 @@ public class BasicSpawner : MonoBehaviour, INetworkRunnerCallbacks
         Cursor.visible = true;
         Cursor.lockState = CursorLockMode.None;
         
+        // Verificar configuración de jugadores pre-colocados
+        ValidatePreplacedPlayers();
+        
         // Verificar si ya existe un NetworkRunner activo (creado desde NetworkSessionStarter)
         NetworkRunner existingRunner = NetworkSessionStarter.GetRunner();
         
@@ -65,14 +63,14 @@ public class BasicSpawner : MonoBehaviour, INetworkRunnerCallbacks
             _runner = existingRunner;
             _runner.AddCallbacks(this);
             
-            // Spawnear jugadores que ya están conectados
+            // Activar jugadores que ya están conectados
             if (_runner.IsServer)
             {
                 foreach (var player in _runner.ActivePlayers)
                 {
-                    if (!_spawnedCharacters.ContainsKey(player))
+                    if (!_activePlayerMappings.ContainsKey(player))
                     {
-                        await SpawnPlayerAsync(_runner, player);
+                        ActivatePlayer(player);
                     }
                 }
             }
@@ -86,14 +84,14 @@ public class BasicSpawner : MonoBehaviour, INetworkRunnerCallbacks
             _runner = existingRunner;
             _runner.AddCallbacks(this);
             
-            // Spawnear jugadores que ya están conectados
+            // Activar jugadores que ya están conectados
             if (_runner.IsServer)
             {
                 foreach (var player in _runner.ActivePlayers)
                 {
-                    if (!_spawnedCharacters.ContainsKey(player))
+                    if (!_activePlayerMappings.ContainsKey(player))
                     {
-                        await SpawnPlayerAsync(_runner, player);
+                        ActivatePlayer(player);
                     }
                 }
             }
@@ -311,131 +309,152 @@ public class BasicSpawner : MonoBehaviour, INetworkRunnerCallbacks
     }
 
 
-    private async System.Threading.Tasks.Task SpawnPlayerAsync(NetworkRunner runner, PlayerRef player)
+    /// <summary>
+    /// Valida que los jugadores pre-colocados estén configurados correctamente
+    /// </summary>
+    private void ValidatePreplacedPlayers()
     {
-        // Esperar a que el userName esté registrado (máximo 5 segundos)
-        string userName = null;
-        int intentos = 0;
-        const int maxIntentos = 50; // 50 intentos x 100ms = 5 segundos
-        
-        while (intentos < maxIntentos)
+        for (int i = 0; i < preplacedPlayers.Length; i++)
         {
-            if (PlayerUserNameRegistry.Instance != null)
+            if (preplacedPlayers[i] == null)
             {
-                userName = PlayerUserNameRegistry.Instance.GetUserName(player);
-                if (!string.IsNullOrEmpty(userName))
-                {
-                    break;
-                }
+                Debug.LogError($"❌ preplacedPlayers[{i}] no está asignado en el Inspector!");
+                continue;
             }
             
-            intentos++;
-            await System.Threading.Tasks.Task.Delay(100);
-        }
-        
-        if (string.IsNullOrEmpty(userName))
-        {
-            Debug.LogWarning($"⚠️ No se encontró userName para Player {player.PlayerId}");
-        }
-        
-        // Obtener el personaje seleccionado
-        string characterName = null;
-        if (!string.IsNullOrEmpty(userName))
-        {
-            characterName = PlayerCharacterSelection.GetSelection(userName);
-            Debug.Log($"🎭 Selección para '{userName}': '{characterName}'");
-            
-            if (string.IsNullOrEmpty(characterName))
+            NetworkObject netObj = preplacedPlayers[i].GetComponent<NetworkObject>();
+            if (netObj == null)
             {
-                Debug.LogWarning($"⚠️ No hay selección de personaje guardada para '{userName}'");
-                Debug.Log($"📋 Selecciones actuales: {string.Join(", ", PlayerCharacterSelection.GetAllSelections().Select(kvp => $"{kvp.Key}→{kvp.Value}"))}");
+                Debug.LogError($"❌ {preplacedPlayers[i].name} no tiene componente NetworkObject!");
+                continue;
             }
+            
+            // Asegurar que empiezan desactivados
+            if (preplacedPlayers[i].activeSelf)
+            {
+                Debug.LogWarning($"⚠️ {preplacedPlayers[i].name} estaba activo, desactivándolo para multiplayer");
+                preplacedPlayers[i].SetActive(false);
+            }
+            
+            Debug.Log($"✅ Jugador {i}: {preplacedPlayers[i].name} configurado correctamente");
         }
+    }
+    
+    /// <summary>
+    /// Activa un GameObject de jugador pre-colocado cuando un jugador se conecta
+    /// </summary>
+    private void ActivatePlayer(PlayerRef player)
+    {
+        // Determinar el índice del jugador (0-3)
+        int playerIndex = GetPlayerIndex(player);
         
-        // Seleccionar el prefab correcto según el personaje
-        NetworkPrefabRef prefabToSpawn = GetPrefabForCharacter(characterName);
-        
-        if (prefabToSpawn.IsValid == false)
+        if (playerIndex < 0 || playerIndex >= preplacedPlayers.Length)
         {
-            Debug.LogError($"❌ No hay prefab válido para el personaje '{characterName}' del usuario '{userName}'");
+            Debug.LogError($"❌ PlayerIndex {playerIndex} fuera de rango!");
             return;
         }
         
-        // Centrar en terrain 50x50 con spawn en círculo
-        float angle = (player.PlayerId - 1) * (360f / 4); // 4 jugadores en círculo
-        float radius = 5f; // Radio del círculo de spawn
-        float centerX = 25f; // Centro del terrain (50/2)
-        float centerZ = 25f; // Centro del terrain (50/2)
+        GameObject playerGO = preplacedPlayers[playerIndex];
         
-        Vector3 spawnPosition = new Vector3(
-            centerX + Mathf.Cos(angle * Mathf.Deg2Rad) * radius,
-            1f, // Altura sobre el terrain
-            centerZ + Mathf.Sin(angle * Mathf.Deg2Rad) * radius
-        );
-        
-        NetworkObject networkPlayerObject = await runner.SpawnAsync(prefabToSpawn, spawnPosition, Quaternion.identity, player);
-        
-        await System.Threading.Tasks.Task.Delay(100);
-        
-        if (networkPlayerObject != null)
+        if (playerGO == null)
         {
-            _spawnedCharacters.Add(player, networkPlayerObject);
-            Debug.Log($"✅ {userName} spawneado como {characterName} en {spawnPosition}");
-            networkPlayerObject.transform.hasChanged = true;
+            Debug.LogError($"❌ No hay jugador pre-colocado en índice {playerIndex}");
+            return;
         }
-        else
+        
+        // Obtener nombre de usuario y personaje seleccionado
+        string userName = PlayerUserNameRegistry.Instance?.GetUserName(player) ?? $"Player{player.PlayerId}";
+        string characterName = PlayerCharacterSelection.GetSelection(userName);
+        
+        Debug.Log($"🎮 Activando {playerGO.name} para {userName} (personaje: {characterName})");
+        
+        // Activar el GameObject
+        playerGO.SetActive(true);
+        
+        // Obtener NetworkObject y asignar InputAuthority
+        NetworkObject netObj = playerGO.GetComponent<NetworkObject>();
+        if (netObj != null && _runner != null)
         {
-            Debug.LogError($"❌ Error al spawnear Player {player.PlayerId}");
+            // Si ya tiene StateAuthority del runner, asignar InputAuthority al jugador
+            if (_runner.IsServer)
+            {
+                netObj.AssignInputAuthority(player);
+                Debug.Log($"✅ InputAuthority asignada a {userName} en {playerGO.name}");
+            }
         }
+        
+        // Registrar el mapeo
+        _activePlayerMappings[player] = playerGO;
+        
+        Debug.Log($"✅ {userName} activado en {playerGO.name}");
     }
     
-    private NetworkPrefabRef GetPrefabForCharacter(string characterName)
+    /// <summary>
+    /// Obtiene el índice del array para un PlayerRef
+    /// Por ahora usa la selección de personaje, pero puedes cambiarlo según tu lógica
+    /// </summary>
+    private int GetPlayerIndex(PlayerRef player)
     {
-        if (string.IsNullOrEmpty(characterName))
+        // Opción 1: Usar PlayerId directamente (primera conexión = índice 0, etc.)
+        // return player.PlayerId - 1;
+        
+        // Opción 2: Usar selección de personaje (buscar el primer slot disponible que coincida)
+        string userName = PlayerUserNameRegistry.Instance?.GetUserName(player);
+        string characterName = PlayerCharacterSelection.GetSelection(userName);
+        
+        // Buscar jugador pre-colocado que coincida con el personaje
+        for (int i = 0; i < preplacedPlayers.Length; i++)
         {
-            Debug.LogWarning($"⚠️ Personaje no seleccionado (characterName vacío), usando prefab genérico");
-            return _playerPrefab;
+            if (preplacedPlayers[i] == null) continue;
+            
+            // Si el jugador ya está activo, saltarlo
+            if (_activePlayerMappings.ContainsValue(preplacedPlayers[i])) continue;
+            
+            string playerName = preplacedPlayers[i].name;
+            
+            // Matching simple por nombre
+            if (!string.IsNullOrEmpty(characterName))
+            {
+                if (characterName.Contains("Paladin") && playerName.Contains("Paladin")) return i;
+                if (characterName.Contains("Bruja") && playerName.Contains("Bruja")) return i;
+                if (characterName.Contains("Arquera") && playerName.Contains("Arquera")) return i;
+                if (characterName.Contains("Cirujano") && playerName.Contains("Cirujano")) return i;
+            }
         }
         
-        Debug.Log($"🔍 Buscando prefab para: '{characterName}'");
-        
-        // Los nombres deben coincidir con los nombres de los GameObjects en el cilindro
-        // Ejemplo: "Player_Paladin (0)", "Player_Bruja (2)", etc.
-        if (characterName.Contains("Paladin") || characterName.Contains("Paladín"))
+        // Fallback: usar primer slot disponible
+        for (int i = 0; i < preplacedPlayers.Length; i++)
         {
-            return _paladinPrefab;
-        }
-        else if (characterName.Contains("Bruja"))
-        {
-            return _brujaPrefab;
-        }
-        else if (characterName.Contains("Arquera"))
-        {
-            return _arqueraPrefab;
-        }
-        else if (characterName.Contains("Cirujano") || characterName.Contains("Barbero"))
-        {
-            return _cirujanoBarberoPrefab;
+            if (!_activePlayerMappings.ContainsValue(preplacedPlayers[i]))
+            {
+                Debug.LogWarning($"⚠️ No se encontró match para {characterName}, usando slot {i}");
+                return i;
+            }
         }
         
-        Debug.LogWarning($"⚠️ Personaje '{characterName}' no reconocido, usando prefab genérico");
-        return _playerPrefab;
+        Debug.LogError($"❌ No hay slots disponibles!");
+        return -1;
     }
     
-    public async void OnPlayerJoined(NetworkRunner runner, PlayerRef player)
+    public void OnPlayerJoined(NetworkRunner runner, PlayerRef player)
     {
         if (runner.IsServer)
         {
-            await SpawnPlayerAsync(runner, player);
+            ActivatePlayer(player);
         }
     }
 
     public void OnPlayerLeft(NetworkRunner runner, PlayerRef player)
     {
-        if (_spawnedCharacters.TryGetValue(player, out NetworkObject networkObject))
+        if (_activePlayerMappings.TryGetValue(player, out GameObject playerGO))
         {
-            runner.Despawn(networkObject);
-            _spawnedCharacters.Remove(player);
+            Debug.Log($"🔴 {playerGO.name} desconectado, desactivando GameObject");
+            
+            // Desactivar el GameObject (no destruir, para que pueda reconectar)
+            playerGO.SetActive(false);
+            
+            // Remover del mapeo
+            _activePlayerMappings.Remove(player);
         }
     }
 

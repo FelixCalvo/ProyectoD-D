@@ -10,12 +10,12 @@ public static class HelperClass
     /// <summary>
     /// Número máximo de jugadores permitidos en una partida multijugador.
     /// </summary>
-    public const int MAX_PLAYERS = 4;
+    public const int MAX_PLAYERS = 1;
     
     /// <summary>
     /// Número mínimo de jugadores requeridos para iniciar una partida.
     /// </summary>
-    public const int MIN_PLAYERS_TO_START = 4;
+    public const int MIN_PLAYERS_TO_START = 1;
     
     /// <summary>
     /// Player actualmente activo/seleccionado en el juego.

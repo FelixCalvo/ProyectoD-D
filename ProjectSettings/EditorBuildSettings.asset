@@ -18,7 +18,7 @@ EditorBuildSettings:
     path: Assets/Scenes/NewGame.unity
     guid: 99c9720ab356a0642a771bea13969a05
   - enabled: 1
-    path: Assets/Scenes/HostServer.unity
+    path: Assets/Scenes/Basura/HostServer/HostServer.unity
     guid: c261dc14f40ac4440bcccad4c39dbaec
   - enabled: 1
     path: Assets/Scenes/Creditos.unity
