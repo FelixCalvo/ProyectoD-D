@@ -22,6 +22,8 @@ public class Player : NetworkBehaviour
   [Networked] private NetworkBool IsWalking { get; set; }
   [Networked] private Vector3 MoveDirection { get; set; }
   [Networked] private Vector3 TargetPosition { get; set; } // Destino de movimiento sincronizado
+  [Networked] private Vector3 NetworkedPosition { get; set; } // Posición actual sincronizada
+  [Networked] private Quaternion NetworkedRotation { get; set; } // Rotación actual sincronizada
   [Networked] private NetworkBool IsAttacking { get; set; }
   [Networked] private NetworkString<_16> CurrentAttackTrigger { get; set; } // "Attack1" o "Attack2"
   [Networked] private int TargetNetworkId { get; set; } = -1; // ID del objetivo de ataque
@@ -187,20 +189,30 @@ public class Player : NetworkBehaviour
   private void UpdateLocalPlayerCamera()
   {
     // Este método se ejecuta en TODOS los clientes y el servidor
-    // Cada uno detecta si tiene InputAuthority y activa su propia cámara
+    // Detectar jugador local:
+    // - HasInputAuthority = true para el jugador que controla este cliente/servidor
     
     bool isLocalPlayer = HasInputAuthority;
     
-    Debug.Log($"[{name}] 🎥 UpdateLocalPlayerCamera: HasInputAuthority={HasInputAuthority}, HasStateAuthority={HasStateAuthority}, Runner.IsServer={Runner?.IsServer}");
+    Debug.Log($"[{name}] 🎥 UpdateLocalPlayerCamera: HasInputAuthority={HasInputAuthority}, HasStateAuthority={HasStateAuthority}, Runner.IsServer={Runner?.IsServer}, Object.InputAuthority={Object?.InputAuthority}, Runner.LocalPlayer={Runner?.LocalPlayer}, isLocalPlayer={isLocalPlayer}");
     
-    // PRIMERO: Desactivar TODAS las cámaras de jugadores en la escena
+    if (!isLocalPlayer)
+    {
+      Debug.LogWarning($"[{name}] ⚠️ UpdateLocalPlayerCamera llamado pero NO es jugador local, ignorando");
+      return;
+    }
+    
+    // PRIMERO: Desactivar TODAS las cámaras de jugadores en la escena (excepto la nuestra)
     Player[] allPlayers = FindObjectsByType<Player>(FindObjectsSortMode.None);
     foreach (Player player in allPlayers)
     {
+      if (player == this) continue; // No tocar nuestra propia cámara todavía
+      
       var playerCamera = player.GetComponentInChildren<CinemachineCamera>();
-      if (playerCamera != null)
+      if (playerCamera != null && playerCamera.Priority != 0)
       {
         playerCamera.Priority = 0;
+        Debug.Log($"[{name}] 📷 Desactivando cámara de {player.name} (Priority=0)");
       }
     }
     
@@ -208,24 +220,27 @@ public class Player : NetworkBehaviour
     var camera = GetComponentInChildren<CinemachineCamera>();
     if (camera != null)
     {
-      if (isLocalPlayer)
-      {
-        camera.Priority = 10; // Prioridad alta para jugador local
-        Debug.Log($"[{name}] 📷✅ Cámara activada para jugador LOCAL (Priority=10, camera={camera.name})");
-        
-        // Actualizar HelperClass.ActivePlayer para compatibilidad
-        HelperClass.ActivePlayer = gameObject;
-      }
-      else
-      {
-        camera.Priority = 0; // Prioridad baja para jugadores remotos
-        Debug.Log($"[{name}] 📷❌ Cámara desactivada para jugador REMOTO (Priority=0)");
-      }
+      camera.Priority = 10; // Prioridad alta para jugador local
+      Debug.Log($"[{name}] 📷✅ Cámara activada para jugador LOCAL (Priority=10, camera={camera.name})");
+      
+      // Actualizar HelperClass.ActivePlayer para compatibilidad
+      HelperClass.ActivePlayer = gameObject;
+      Debug.Log($"[{name}] ✅ HelperClass.ActivePlayer asignado para transparencia de paredes");
     }
     else
     {
       Debug.LogError($"[{name}] ❌ NO se encontró CinemachineCamera en hijos!");
     }
+  }
+  
+  /// <summary>
+  /// Método público para forzar actualización de cámara (llamado desde BasicSpawner)
+  /// </summary>
+  public void ForceUpdateCamera()
+  {
+    Debug.Log($"[{name}] 🎥 ForceUpdateCamera llamado externamente");
+    UpdateLocalPlayerCamera();
+    _cameraConfigured = true;
   }
   
   /// <summary>
@@ -295,6 +310,10 @@ public class Player : NetworkBehaviour
       {
         UpdateCombat();
       }
+      
+      // Sincronizar posición y rotación cada frame (servidor solamente)
+      NetworkedPosition = transform.position;
+      NetworkedRotation = transform.rotation;
     }
     
     // IMPORTANTE: Actualizar IsWalking en TODOS los clientes (incluso sin autoridad)
@@ -353,8 +372,9 @@ public class Player : NetworkBehaviour
   public override void Render()
   {
     // Configurar cámara cuando se asigne InputAuthority (solo una vez la primera vez)
-    if (!_cameraConfigured && (HasInputAuthority || HasStateAuthority))
+    if (!_cameraConfigured && HasInputAuthority)
     {
+      Debug.Log($"[{name}] 🎥 Llamando UpdateLocalPlayerCamera en Render (HasInputAuthority={HasInputAuthority})");
       UpdateLocalPlayerCamera();
       _cameraConfigured = true;
     }
@@ -373,6 +393,29 @@ public class Player : NetworkBehaviour
     
     // Actualizar visibilidad cada frame basándose en el estado sincronizado
     UpdateVisibility();
+    
+    // Sincronizar posición del transform desde NetworkedPosition en clientes (NO en servidor)
+    if (!HasStateAuthority && NetworkedPosition != Vector3.zero)
+    {
+      float distance = Vector3.Distance(transform.position, NetworkedPosition);
+      
+      // Si la diferencia es significativa, interpolar suavemente
+      if (distance > 0.1f)
+      {
+        // Interpolar posición para movimiento suave
+        transform.position = Vector3.Lerp(transform.position, NetworkedPosition, Time.deltaTime * 10f);
+        
+        // Si la diferencia es muy grande (>5m), teleportar directamente
+        if (distance > 5f)
+        {
+          transform.position = NetworkedPosition;
+          Debug.LogWarning($"[{name}] ⚠️ Teleportando a posición sincronizada (distancia={distance:F2})");
+        }
+      }
+      
+      // Sincronizar rotación
+      transform.rotation = Quaternion.Slerp(transform.rotation, NetworkedRotation, Time.deltaTime * 10f);
+    }
     
     // Sincronizar _currentTarget desde TargetNetworkId en TODOS los clientes
     if (TargetNetworkId > 0 && _currentTarget == null)

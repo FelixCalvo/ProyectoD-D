@@ -1,7 +1,8 @@
 using UnityEngine;
+using Fusion;
 
 [RequireComponent(typeof(Collider))]
-public class DoorTrigger : MonoBehaviour
+public class DoorTrigger : NetworkBehaviour
 {
     [Header("Configuración")]
     [SerializeField] private string openTriggerName = "Open";
@@ -9,6 +10,9 @@ public class DoorTrigger : MonoBehaviour
     [SerializeField] private bool requireKeyPress = true;
     [SerializeField] private KeyCode openKey = KeyCode.E;
     [SerializeField] private float disableBlockerDelay = 0.5f;
+    
+    // Variable sincronizada de red
+    [Networked] private NetworkBool IsOpen { get; set; }
     
     private Animator doorAnimator;
     private Collider doorBlocker;
@@ -68,6 +72,12 @@ public class DoorTrigger : MonoBehaviour
         {
             OpenDoor();
         }
+        
+        // Sincronizar el estado de la puerta en todos los clientes
+        if (IsOpen && !hasBeenOpened)
+        {
+            ApplyDoorOpenState();
+        }
     }
 
     void OnTriggerEnter(Collider other)
@@ -100,7 +110,25 @@ public class DoorTrigger : MonoBehaviour
             return;
         }
 
-        if (doorAnimator != null)
+        // Marcar como abierta en la red (se sincroniza automáticamente)
+        if (Object != null && Object.HasStateAuthority)
+        {
+            IsOpen = true;
+            Debug.Log($"[{gameObject.name}] 🚪 Puerta abierta por jugador con autoridad");
+        }
+        else
+        {
+            // En singleplayer o si no hay red
+            ApplyDoorOpenState();
+        }
+    }
+    
+    /// <summary>
+    /// Aplica el estado de puerta abierta (animación y colliders)
+    /// </summary>
+    private void ApplyDoorOpenState()
+    {
+        if (doorAnimator != null && !hasBeenOpened)
         {
             doorAnimator.SetTrigger(openTriggerName);
             hasBeenOpened = true;
@@ -110,6 +138,8 @@ public class DoorTrigger : MonoBehaviour
             {
                 Invoke(nameof(DisableBlocker), disableBlockerDelay);
             }
+            
+            Debug.Log($"[{gameObject.name}] ✅ Estado de puerta abierta aplicado");
         }
     }
 

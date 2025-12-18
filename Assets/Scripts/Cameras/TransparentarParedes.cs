@@ -4,7 +4,7 @@ using UnityEngine;
 
 public class TransparentarParedes : MonoBehaviour
 {
-    public GameObject player;
+    public GameObject player; // [DEPRECATED] Se autodetecta en multiplayer
     public GameObject rootObjetosTransparentes; // GameObject raíz (Castle) - solo sus hijos se harán transparentes
     public float alturaCapsule = 2.0f; // Altura del jugador
     public float radioCapsule = 0.4f; // Radio del CapsuleCast
@@ -19,10 +19,26 @@ public class TransparentarParedes : MonoBehaviour
     private HashSet<GameObject> objetosTransparentes = new HashSet<GameObject>();
     // Diccionario para rastrear tiempo desde que dejó de bloquear
     private Dictionary<GameObject, float> tiemposSinBloquear = new Dictionary<GameObject, float>();
+    // Diccionario para almacenar layers originales
+    private Dictionary<GameObject, int> layersOriginales = new Dictionary<GameObject, int>();
 
     void Update()
     {
-        if (player == null) return;
+        // Autodetectar el jugador local (singleplayer o multiplayer)
+        if (player == null)
+        {
+            player = HelperClass.ActivePlayer;
+            if (player != null)
+            {
+                Debug.Log($"[TransparentarParedes] ✅ Jugador detectado: {player.name}");
+            }
+        }
+        
+        if (player == null)
+        {
+            Debug.LogWarning($"[TransparentarParedes] ⚠️ No hay jugador activo (HelperClass.ActivePlayer = null)");
+            return;
+        }
 
         // Si hay un diálogo activo, restaurar todas las paredes
         if (DialogueBlocker.Instance != null && DialogueBlocker.Instance.IsDialogueActive)
@@ -54,6 +70,12 @@ public class TransparentarParedes : MonoBehaviour
             if (hit.collider.gameObject != player && hit.collider.gameObject.layer != LayerMask.NameToLayer("Player"))
             {
                 GameObject obj = hit.collider.gameObject;
+                
+                // Ignorar objetos en layer Ground (terreno, suelo)
+                if (obj.layer == LayerMask.NameToLayer("Ground"))
+                {
+                    continue;
+                }
                 
                 // Verificar si es una puerta
                 bool esPuerta = obj.CompareTag("Door") || obj.GetComponent<DoorTrigger>() != null;
@@ -198,10 +220,14 @@ public class TransparentarParedes : MonoBehaviour
                 materiales[i].color = color;
             }
             renderer.materials = materiales;
-
-            // Cambiar layer
-            obj.layer = LayerMask.NameToLayer("ObjetosTransparentes");
         }
+        
+        // Guardar y cambiar layer
+        if (!layersOriginales.ContainsKey(obj))
+        {
+            layersOriginales[obj] = obj.layer;
+        }
+        obj.layer = LayerMask.NameToLayer("ObjetosTransparentes");
     }
 
     void RestaurarOpacidad(GameObject obj)
@@ -219,8 +245,12 @@ public class TransparentarParedes : MonoBehaviour
             }
         }
 
-        // Restaurar layer (asumiendo que era Default)
-        obj.layer = 0;
+        // Restaurar layer original
+        if (layersOriginales.ContainsKey(obj))
+        {
+            obj.layer = layersOriginales[obj];
+            layersOriginales.Remove(obj);
+        }
     }
 
     void RestaurarTodasLasParedes()
@@ -236,6 +266,7 @@ public class TransparentarParedes : MonoBehaviour
         // Limpiar todas las colecciones
         objetosTransparentes.Clear();
         tiemposSinBloquear.Clear();
+        layersOriginales.Clear();
     }
 
     void OnDrawGizmos()

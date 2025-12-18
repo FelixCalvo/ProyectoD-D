@@ -485,6 +485,15 @@ public class BasicSpawner : MonoBehaviour, INetworkRunnerCallbacks
             // Marcar como conectado - esto se sincronizará automáticamente a todos los clientes
             playerScript.IsPlayerConnected = true;
             Debug.Log($"✅ IsPlayerConnected = true para {playerGO.name}");
+            
+            // CRÍTICO: Si es el jugador local del servidor, configurar cámara inmediatamente
+            if (player == _runner.LocalPlayer)
+            {
+                Debug.Log($"🎥 Este es el jugador del servidor, configurando cámara...");
+                // Esperar un frame adicional para que InputAuthority se propague
+                await System.Threading.Tasks.Task.Delay(100);
+                playerScript.ForceUpdateCamera();
+            }
         }
         else if (netObj.HasStateAuthority == false)
         {
