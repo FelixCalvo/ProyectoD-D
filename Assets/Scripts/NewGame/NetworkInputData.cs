@@ -12,4 +12,5 @@ public struct NetworkInputData : INetworkInput
   public NetworkBool moveCommand;     // Comando de movimiento (clic derecho en suelo)
   public Vector3 targetPosition;      // Posición objetivo para movimiento
   public int targetPlayerId;          // ID del jugador objetivo para ataque (-1 si no hay)
+  public NetworkBool interactCommand; // Comando de interacción (tecla E para puertas, etc.)
 }

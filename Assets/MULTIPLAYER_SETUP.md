@@ -33,9 +33,18 @@ NewGame (Scene)
 
 **IMPORTANTE:**
 - ✅ Los 4 jugadores deben estar **DESACTIVADOS** en la escena (checkbox desactivado)
-- ✅ Cada uno debe tener **NetworkObject** con `Allow State Authority` activado
+- ✅ Cada uno debe tener **NetworkObject** configurado así:
+  - `Allow State Authority`: ✅ Activado
+  - `Destroy When State Authority Leaves`: ❌ Desactivado (para no destruirlo al desconectar)
+  - **Networking Type**: Debe ser `Scene Object` (por defecto para objetos en la escena)
+  - Fusion los registrará automáticamente cuando se activen
 - ✅ Cada uno debe tener su **CinemachineCamera** como hijo
 - ✅ Las posiciones en la escena son donde aparecerán al conectarse
+
+**NOTA:** Los NetworkObjects en la escena son automáticamente registrados por Fusion cuando:
+1. El GameObject está activo
+2. El NetworkRunner está ejecutándose
+Por eso solo necesitamos activarlos y asignar InputAuthority, NO spawnerlos manualmente.
 
 ---
 

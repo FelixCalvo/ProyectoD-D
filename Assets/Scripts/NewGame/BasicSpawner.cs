@@ -45,6 +45,7 @@ public class BasicSpawner : MonoBehaviour, INetworkRunnerCallbacks
     private bool _isPendingAttack = false;
     private Vector3 _pendingTargetPosition = Vector3.zero;
     private int _pendingTargetPlayerId = -1;
+    private bool _hasPendingInteract = false;
 
     async void Start()
     {
@@ -123,6 +124,13 @@ public class BasicSpawner : MonoBehaviour, INetworkRunnerCallbacks
         // Solo capturar input si hay un runner activo
         if (_runner == null || !_runner.IsRunning)
             return;
+        
+        // Capturar tecla E para interacción
+        if (Input.GetKeyDown(KeyCode.E) && !_hasPendingInteract)
+        {
+            _hasPendingInteract = true;
+            Debug.Log($"[Input] 🔑 TECLA E capturada en Update() (Frame {Time.frameCount})");
+        }
         
         // Capturar clicks del ratón (solo si no hay un click pendiente)
         if (Input.GetMouseButtonDown(1) && !_hasPendingClick)
@@ -343,7 +351,7 @@ public class BasicSpawner : MonoBehaviour, INetworkRunnerCallbacks
     /// <summary>
     /// Activa un GameObject de jugador pre-colocado cuando un jugador se conecta
     /// </summary>
-    private void ActivatePlayer(PlayerRef player)
+    private async void ActivatePlayer(PlayerRef player)
     {
         // Determinar el índice del jugador (0-3)
         int playerIndex = GetPlayerIndex(player);
@@ -368,19 +376,30 @@ public class BasicSpawner : MonoBehaviour, INetworkRunnerCallbacks
         
         Debug.Log($"🎮 Activando {playerGO.name} para {userName} (personaje: {characterName})");
         
-        // Activar el GameObject
+        // Obtener NetworkObject
+        NetworkObject netObj = playerGO.GetComponent<NetworkObject>();
+        if (netObj == null)
+        {
+            Debug.LogError($"❌ {playerGO.name} no tiene componente NetworkObject!");
+            return;
+        }
+        
+        // IMPORTANTE: Activar el GameObject
+        // Fusion lo detectará automáticamente y lo registrará como Scene Object
         playerGO.SetActive(true);
         
-        // Obtener NetworkObject y asignar InputAuthority
-        NetworkObject netObj = playerGO.GetComponent<NetworkObject>();
-        if (netObj != null && _runner != null)
+        // Esperar un frame para que Fusion procese el objeto de escena
+        await System.Threading.Tasks.Task.Delay(100);
+        
+        // Asignar InputAuthority (el objeto ya está spawneado por Fusion como Scene Object)
+        if (_runner != null && _runner.IsServer && netObj.HasStateAuthority)
         {
-            // Si ya tiene StateAuthority del runner, asignar InputAuthority al jugador
-            if (_runner.IsServer)
-            {
-                netObj.AssignInputAuthority(player);
-                Debug.Log($"✅ InputAuthority asignada a {userName} en {playerGO.name}");
-            }
+            netObj.AssignInputAuthority(player);
+            Debug.Log($"✅ InputAuthority asignada a {userName} en {playerGO.name}");
+        }
+        else if (netObj.HasStateAuthority == false)
+        {
+            Debug.LogWarning($"⚠️ {playerGO.name} no tiene StateAuthority aún, esperando...");
         }
         
         // Registrar el mapeo
@@ -448,9 +467,17 @@ public class BasicSpawner : MonoBehaviour, INetworkRunnerCallbacks
     {
         if (_activePlayerMappings.TryGetValue(player, out GameObject playerGO))
         {
-            Debug.Log($"🔴 {playerGO.name} desconectado, desactivando GameObject");
+            Debug.Log($"🔴 {playerGO.name} desconectado");
             
-            // Desactivar el GameObject (no destruir, para que pueda reconectar)
+            // Obtener NetworkObject y despawnear
+            NetworkObject netObj = playerGO.GetComponent<NetworkObject>();
+            if (netObj != null && runner.IsServer)
+            {
+                runner.Despawn(netObj);
+                Debug.Log($"✅ NetworkObject despawneado");
+            }
+            
+            // Desactivar el GameObject
             playerGO.SetActive(false);
             
             // Remover del mapeo
@@ -461,6 +488,14 @@ public class BasicSpawner : MonoBehaviour, INetworkRunnerCallbacks
     public void OnInput(NetworkRunner runner, NetworkInput input)
     {
         var data = new NetworkInputData();
+
+        // Procesar tecla E
+        if (_hasPendingInteract)
+        {
+            data.interactCommand = true;
+            Debug.Log($"[Input] ✓✓ Enviando INTERACCIÓN (E)");
+            _hasPendingInteract = false;
+        }
 
         // CRÍTICO: Procesar clicks almacenados en Update()
         // Esto garantiza que NO se pierdan clicks entre ticks de Fusion

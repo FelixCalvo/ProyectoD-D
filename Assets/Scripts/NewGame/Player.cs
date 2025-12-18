@@ -189,6 +189,12 @@ public class Player : NetworkBehaviour
       // Procesar input de red
       if (GetInput(out NetworkInputData data))
       {
+        // Comando de interacción (tecla E)
+        if (data.interactCommand)
+        {
+          TryInteract();
+        }
+        
         // Comando de ataque tiene máxima prioridad
         if (data.attackCommand && data.targetPlayerId >= 0)
         {
@@ -633,5 +639,42 @@ public class Player : NetworkBehaviour
     // NO forzar IsWalking aquí - dejar que FixedUpdateNetwork lo active cuando haya velocidad real
     
     Debug.Log($"[{name}] ✓ NavMesh SetDestination({position}) = {success}, hasPath: {_agent.hasPath}, pathPending: {_agent.pathPending}, velocity: {_agent.velocity.magnitude:F2}, TargetPosition={TargetPosition}, isStopped={_agent.isStopped}");
+  }
+
+  /// <summary>
+  /// Intenta interactuar con objetos cercanos (puertas, NPCs, etc.)
+  /// </summary>
+  private void TryInteract()
+  {
+    // Buscar DoorTrigger en un radio cercano
+    Collider[] nearbyColliders = Physics.OverlapSphere(transform.position, 3f);
+    
+    DoorTrigger closestDoor = null;
+    float closestDistance = float.MaxValue;
+    
+    foreach (Collider col in nearbyColliders)
+    {
+      DoorTrigger door = col.GetComponent<DoorTrigger>();
+      if (door != null)
+      {
+        float distance = Vector3.Distance(transform.position, col.transform.position);
+        if (distance < closestDistance)
+        {
+          closestDistance = distance;
+          closestDoor = door;
+        }
+      }
+    }
+    
+    if (closestDoor != null)
+    {
+      // Llamar al método público de la puerta para abrirla
+      closestDoor.TryOpen();
+      Debug.Log($"[{name}] 🚪 Abriendo puerta: {closestDoor.name}");
+    }
+    else
+    {
+      Debug.Log($"[{name}] ❌ No hay puertas cercanas para abrir");
+    }
   }
 }

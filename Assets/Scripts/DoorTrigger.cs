@@ -112,6 +112,14 @@ public class DoorTrigger : MonoBehaviour
             }
         }
     }
+
+    /// <summary>
+    /// Método público para abrir la puerta desde scripts externos (como Player en multiplayer)
+    /// </summary>
+    public void TryOpen()
+    {
+        OpenDoor();
+    }
     
     private void DisableBlocker()
     {
