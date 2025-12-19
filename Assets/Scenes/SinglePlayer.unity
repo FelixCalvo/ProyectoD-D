@@ -3120,6 +3120,7 @@ GameObject:
   - component: {fileID: 223883241}
   - component: {fileID: 223883240}
   - component: {fileID: 223883243}
+  - component: {fileID: 223883246}
   - component: {fileID: 223883244}
   - component: {fileID: 223883245}
   m_Layer: 0
@@ -3208,6 +3209,19 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c458b3eaf5a2cfe4ab1a06bd9be0f08d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+--- !u!114 &223883246
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 223883239}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4e650aa3991923f45827284c4d72da49, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  panelFungusMenu: {fileID: 1357896405}
 --- !u!1001 &228201872
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -7828,11 +7842,11 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   version: 1
-  scrollPos: {x: 480.73462, y: 148.47522}
+  scrollPos: {x: -49.048, y: 96.23268}
   variablesScrollPos: {x: 0, y: 0}
   variablesExpanded: 1
-  blockViewHeight: 533
-  zoom: 0.25
+  blockViewHeight: 520
+  zoom: 0.48999998
   scrollViewRect:
     serializedVersion: 2
     x: -343
@@ -7840,7 +7854,8 @@ MonoBehaviour:
     width: 1114
     height: 859
   selectedBlocks: []
-  selectedCommands: []
+  selectedCommands:
+  - {fileID: 518453533}
   variables:
   - {fileID: 518453719}
   - {fileID: 518453727}
@@ -8294,7 +8309,7 @@ MonoBehaviour:
   description: 
   character: {fileID: 2063358433}
   portrait: {fileID: 0}
-  voiceOverClip: {fileID: 0}
+  voiceOverClip: {fileID: 8300000, guid: cde6a88fe3acd2744920efc5fed23d7f, type: 3}
   showAlways: 1
   showCount: 1
   extendPrevious: 0
@@ -8321,7 +8336,7 @@ MonoBehaviour:
   description: 
   character: {fileID: 2063358433}
   portrait: {fileID: 0}
-  voiceOverClip: {fileID: 0}
+  voiceOverClip: {fileID: 8300000, guid: 8713f599b6559d14ca16440350361731, type: 3}
   showAlways: 1
   showCount: 1
   extendPrevious: 0
@@ -8369,7 +8384,7 @@ MonoBehaviour:
   description: 
   character: {fileID: 2063358433}
   portrait: {fileID: 0}
-  voiceOverClip: {fileID: 0}
+  voiceOverClip: {fileID: 8300000, guid: d4ff6e2f205db984787d0d9ea3e535f8, type: 3}
   showAlways: 1
   showCount: 1
   extendPrevious: 0
@@ -8396,7 +8411,7 @@ MonoBehaviour:
   description: 
   character: {fileID: 1015872684}
   portrait: {fileID: 0}
-  voiceOverClip: {fileID: 0}
+  voiceOverClip: {fileID: 8300000, guid: 29e01b8e83475a8449fc834b366c1c97, type: 3}
   showAlways: 1
   showCount: 1
   extendPrevious: 0
@@ -12865,7 +12880,7 @@ MonoBehaviour:
   description: 
   character: {fileID: 2063358433}
   portrait: {fileID: 0}
-  voiceOverClip: {fileID: 0}
+  voiceOverClip: {fileID: 8300000, guid: 1c626428b93c53546ae78457c6f7d6d1, type: 3}
   showAlways: 1
   showCount: 1
   extendPrevious: 0
@@ -12892,7 +12907,7 @@ MonoBehaviour:
   description: 
   character: {fileID: 2063358433}
   portrait: {fileID: 0}
-  voiceOverClip: {fileID: 0}
+  voiceOverClip: {fileID: 8300000, guid: 41ca21cd78a335844b9029bb892996b8, type: 3}
   showAlways: 1
   showCount: 1
   extendPrevious: 0
@@ -12919,7 +12934,7 @@ MonoBehaviour:
   description: 
   character: {fileID: 2063358433}
   portrait: {fileID: 0}
-  voiceOverClip: {fileID: 0}
+  voiceOverClip: {fileID: 8300000, guid: bb08ca9616785f7429c942519eb6a462, type: 3}
   showAlways: 1
   showCount: 1
   extendPrevious: 0
@@ -13014,7 +13029,7 @@ MonoBehaviour:
   description: 
   character: {fileID: 2063358433}
   portrait: {fileID: 0}
-  voiceOverClip: {fileID: 0}
+  voiceOverClip: {fileID: 8300000, guid: e550254642fe8dc45bfbf42460ca58fa, type: 3}
   showAlways: 1
   showCount: 1
   extendPrevious: 0
@@ -13041,7 +13056,7 @@ MonoBehaviour:
   description: 
   character: {fileID: 2063358433}
   portrait: {fileID: 0}
-  voiceOverClip: {fileID: 0}
+  voiceOverClip: {fileID: 8300000, guid: 0bab3adcef9a99640a59fa0acf51abac, type: 3}
   showAlways: 1
   showCount: 1
   extendPrevious: 0
@@ -13068,7 +13083,7 @@ MonoBehaviour:
   description: 
   character: {fileID: 2063358433}
   portrait: {fileID: 0}
-  voiceOverClip: {fileID: 0}
+  voiceOverClip: {fileID: 8300000, guid: 316234306c004774dad079cc4d49ddb5, type: 3}
   showAlways: 1
   showCount: 1
   extendPrevious: 0
@@ -13095,7 +13110,7 @@ MonoBehaviour:
   description: 
   character: {fileID: 2063358433}
   portrait: {fileID: 0}
-  voiceOverClip: {fileID: 0}
+  voiceOverClip: {fileID: 8300000, guid: c5725c43eafec1c4ab8af851f44fa701, type: 3}
   showAlways: 1
   showCount: 1
   extendPrevious: 0
@@ -13122,7 +13137,7 @@ MonoBehaviour:
   description: 
   character: {fileID: 2063358433}
   portrait: {fileID: 0}
-  voiceOverClip: {fileID: 0}
+  voiceOverClip: {fileID: 8300000, guid: bb8b0a7f5fee67348a6de5e3ddf522e9, type: 3}
   showAlways: 1
   showCount: 1
   extendPrevious: 0
@@ -13149,7 +13164,7 @@ MonoBehaviour:
   description: 
   character: {fileID: 2063358433}
   portrait: {fileID: 0}
-  voiceOverClip: {fileID: 0}
+  voiceOverClip: {fileID: 8300000, guid: 1422d9d18de743a489f0c02accdc7995, type: 3}
   showAlways: 1
   showCount: 1
   extendPrevious: 0
@@ -13176,7 +13191,7 @@ MonoBehaviour:
   description: 
   character: {fileID: 1015872684}
   portrait: {fileID: 0}
-  voiceOverClip: {fileID: 0}
+  voiceOverClip: {fileID: 8300000, guid: f29642d8679945d4b9eda0b2f106242e, type: 3}
   showAlways: 1
   showCount: 1
   extendPrevious: 0
@@ -13203,7 +13218,7 @@ MonoBehaviour:
   description: 
   character: {fileID: 2063358433}
   portrait: {fileID: 0}
-  voiceOverClip: {fileID: 0}
+  voiceOverClip: {fileID: 8300000, guid: 0920de7421e5825438a68e0ca595c3d0, type: 3}
   showAlways: 1
   showCount: 1
   extendPrevious: 0
@@ -13230,7 +13245,7 @@ MonoBehaviour:
   description: 
   character: {fileID: 2063358433}
   portrait: {fileID: 0}
-  voiceOverClip: {fileID: 0}
+  voiceOverClip: {fileID: 8300000, guid: fafa15f9c34581f499ac18eabd3e07c7, type: 3}
   showAlways: 1
   showCount: 1
   extendPrevious: 0
@@ -13257,7 +13272,7 @@ MonoBehaviour:
   description: 
   character: {fileID: 2063358433}
   portrait: {fileID: 0}
-  voiceOverClip: {fileID: 0}
+  voiceOverClip: {fileID: 8300000, guid: 5e4ec73a964538d4b931fdd2c1d47525, type: 3}
   showAlways: 1
   showCount: 1
   extendPrevious: 0
@@ -22636,8 +22651,8 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 1992327138}
   m_HandleRect: {fileID: 1992327137}
   m_Direction: 2
-  m_Value: 1.0000014
-  m_Size: 0.8976471
+  m_Value: 1.0000007
+  m_Size: 0.897647
   m_NumberOfSteps: 0
   m_OnValueChanged:
     m_PersistentCalls:
@@ -24193,7 +24208,7 @@ RectTransform:
   m_Father: {fileID: 895253068}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 1, y: 1}
+  m_AnchorMax: {x: 0.99999994, y: 1}
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 20, y: 20}
   m_Pivot: {x: 0.5, y: 0.5}
@@ -28118,6 +28133,11 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 418032, guid: b2104cd97435ca840ad296caa01cb4ff, type: 3}
   m_PrefabInstance: {fileID: 2143146151}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &1357896405 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 115102, guid: 318a497158004ff48a3be92524bb1d34, type: 3}
+  m_PrefabInstance: {fileID: 232565915}
+  m_PrefabAsset: {fileID: 0}
 --- !u!4 &1359273594 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 315485345194210949, guid: 7e93c7d9820f4de49b244c404455da2b, type: 3}
@@ -30267,15 +30287,15 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_Material: {fileID: 0}
-  m_Color: {r: 0, g: 0, b: 0, a: 0.9411765}
+  m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 10907, guid: 0000000000000000f000000000000000, type: 0}
-  m_Type: 1
+  m_Sprite: {fileID: 21300000, guid: 95cf38e132958724a88e2e0f5ce3558f, type: 3}
+  m_Type: 0
   m_PreserveAspect: 0
   m_FillCenter: 1
   m_FillMethod: 4
@@ -30997,7 +31017,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_Material: {fileID: 0}
-  m_Color: {r: 0.1981132, g: 0.09064614, b: 0.09064614, a: 0.9647059}
+  m_Color: {r: 0.1981132, g: 0.09064614, b: 0.09064614, a: 0}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -34659,7 +34679,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: 0, y: -25}
+  m_AnchoredPosition: {x: 0, y: -56.16571}
   m_SizeDelta: {x: 0, y: 50}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1876640814
@@ -34715,7 +34735,7 @@ MonoBehaviour:
   m_enableAutoSizing: 0
   m_fontSizeMin: 18
   m_fontSizeMax: 72
-  m_fontStyle: 0
+  m_fontStyle: 1
   m_HorizontalAlignment: 2
   m_VerticalAlignment: 512
   m_textAlignment: 65535
@@ -36653,7 +36673,7 @@ RectTransform:
   m_Children: []
   m_Father: {fileID: 356273580}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0.10235286}
+  m_AnchorMin: {x: 0, y: 0.10235298}
   m_AnchorMax: {x: 1, y: 1}
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 20, y: 20}
